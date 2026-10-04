@@ -715,7 +715,8 @@ async function syncDelete(id){
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 function renderHistory(){
-  const sessions=Object.entries(state.sessions||{}).sort((a,b)=>b[0].localeCompare(a[0]));
+  const orderDate=s=>{const iso=String(s.date||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(iso)return Number(iso[1])*10000+Number(iso[2])*100+Number(iso[3]);const short=String(s.date||'').match(/^(\d{2})\.(\d{2})$/);return short?Number(short[2])*100+Number(short[1]):0;};
+  const sessions=Object.entries(state.sessions||{}).sort((a,b)=>orderDate(b[1])-orderDate(a[1])||b[0].localeCompare(a[0]));
   if(!sessions.length){document.getElementById('histContent').innerHTML='<div class="empty-state">Пока нет тренировок.<br>Заверши первую — она появится здесь.</div>';return;}
   document.getElementById('histContent').innerHTML=sessions.map(([key,s])=>`
     <div class="hist-card">
@@ -996,7 +997,9 @@ async function importJSON(event){
     const backup=JSON.parse(await file.text());
     if(!backup||typeof backup.sessions!=='object'||!backup.sessions||!Object.values(backup.sessions).every(session=>session&&/^(?:\d{4}-\d{2}-\d{2}|\d{2}\.\d{2})$/.test(String(session.date||''))&&Array.isArray(session.exercises)&&session.exercises.every(ex=>ex&&typeof ex.name==='string'&&typeof ex.muscle==='string'&&Array.isArray(ex.sets)&&ex.sets.every(set=>set&&Number.isFinite(Number(set.reps))&&(set.weight===''||Number.isFinite(Number(set.weight)))))))throw new Error('invalid');
     if(!confirm('Добавить тренировки из файла к локальной истории? Записи с теми же ключами обновятся.'))return;
-    state.sessions={...(state.sessions||{}),...backup.sessions}; if(backup.current&&typeof backup.current==='object')state.current={...(state.current||{}),...backup.current};
+    const importedIds=new Set(Object.values(backup.sessions).map(s=>s.id).filter(Boolean));
+    const existing=Object.fromEntries(Object.entries(state.sessions||{}).filter(([,s])=>!importedIds.has(s.id)));
+    state.sessions={...existing,...backup.sessions}; if(backup.current&&typeof backup.current==='object')state.current={...(state.current||{}),...backup.current};
     save();renderTabs();renderExercises();showToast('Копия восстановлена');
   }catch(e){showToast('Не удалось прочитать резервную копию JSON');}
   finally{event.target.value='';}
