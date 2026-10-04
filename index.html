@@ -560,8 +560,10 @@ async function loadFromSheets(manual=false){
   if(!settings.scriptUrl){hideLoader();return;}
   if(manual) showLoader('Загружаем из Google Sheets...');
   setSyncUI('loading','Загрузка...');
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),10000);
   try {
-    const r=await fetch(settings.scriptUrl+'?t='+Date.now());
+    const r=await fetch(settings.scriptUrl+'?t='+Date.now(),{signal:controller.signal});
     const j=await r.json();
     if(j.ok&&j.sessions){
       // merge: sheets is source of truth for synced, keep current (in-progress) workouts
@@ -576,10 +578,12 @@ async function loadFromSheets(manual=false){
       setSyncUI('err','Ошибка');
     }
   } catch(e){
-    setSyncUI('err','Нет соединения');
-    if(manual) showToast('Нет соединения с Google Sheets');
+    setSyncUI('err',e.name==='AbortError'?'Тайм-аут загрузки':'Нет соединения');
+    if(manual) showToast(e.name==='AbortError'?'Google Sheets не ответил за 10 секунд':'Нет соединения с Google Sheets');
+  } finally {
+    clearTimeout(timeout);
+    hideLoader();
   }
-  hideLoader();
   // refresh visible screen
   const active=document.querySelector('.screen.active');
   if(active&&active.id==='historyScreen') renderHistory();
