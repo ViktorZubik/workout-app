@@ -919,4 +919,120 @@ function renderExStats(){
   // Table
   const tableRows=points.slice().reverse().map((p,i)=>{
     const isMax=p.metric===bestMetric;
-    const setStr=p.sets.map(s=>{const setMetric=p.weightMode==='assistance'?Number(s.weight):Number(s.weight)*(1+Number(s.reps)/30);const bestSet=p.weightMode==='assistance'?setMetric===p.metric:setMetric===bestMetric;return`<sp
+    const setStr=p.sets.map(s=>{const setMetric=p.weightMode==='assistance'?Number(s.weight):Number(s.weight)*(1+Number(s.reps)/30);const bestSet=p.weightMode==='assistance'?setMetric===p.metric:setMetric===bestMetric;return`<span class="set-pill${isMax&&bestSet?' best-pill':''}">${escapeHtml(s.reps)}×${escapeHtml(s.weight)}${p.weightMode==='assistance'?'кг противовеса':'кг'}</span>`;}).join('');
+    return`<tr>
+      <td>${escapeHtml(formatDate(p.date))}</td>
+      <td>${setStr}${isMax?'<span class="pr-badge">🏆 ПР</span>':''}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML=`
+    <div class="chart-wrap" style="margin-bottom:12px">
+      <svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible">
+        <defs><linearGradient id="exGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4A9EFF" stop-opacity="0.25"/><stop offset="100%" stop-color="#4A9EFF" stop-opacity="0"/></linearGradient></defs>
+        <polygon points="${area}" fill="url(#exGrad)"/>
+        <polyline points="${poly}" fill="none" stroke="#4A9EFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${xs.map((x,i)=>`<circle cx="${x}" cy="${ys[i]}" r="${points[i].metric===bestMetric?4:3}" fill="${points[i].metric===bestMetric?'#39D353':'#4A9EFF'}"/>
+          <text x="${x}" y="${ys[i]-7}" text-anchor="middle" fill="var(--text2)" font-size="9">${assistance?points[i].metric:Math.round(points[i].metric*10)/10}кг</text>`).join('')}
+        <text x="${pad}" y="${H-1}" fill="var(--text3)" font-size="8">${escapeHtml(formatDate(points[0].date))}</text>
+        ${points.length>1?`<text x="${W-pad}" y="${H-1}" text-anchor="end" fill="var(--text3)" font-size="8">${escapeHtml(formatDate(points[points.length-1].date))}</text>`:''}
+      </svg>
+      <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px">${assistance?'Минимальный противовес за тренировку':'Расчётный максимум с учётом повторов'} · 🟢 лучший результат</div>
+    </div>
+    <div class="chart-wrap">
+      <table class="stats-table">
+        <thead><tr><th>Дата</th><th>Подходы</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
+}
+function renderCalendar(){
+  const sessions=Object.values(state.sessions||{});
+  const byDate={};sessions.forEach(s=>{if(DAYS.some(day=>day.key===s.dayKey)&&/^\d{4}-\d{2}-\d{2}$/.test(String(s.date||'')))byDate[s.date]=s.dayKey;});
+  const today=new Date(),start=new Date(today);start.setDate(start.getDate()-55);
+  const firstDow=start.getDay();
+  const cells=[];for(let i=0;i<firstDow;i++)cells.push(null);
+  const cur=new Date(start);while(cur<=today){cells.push(localDateISO(cur));cur.setDate(cur.getDate()+1);}
+  document.getElementById('calendarChart').innerHTML=`
+    <div class="cal-day-labels">${['Вс','Пн','Вт','Ср','Чт','Пт','Сб'].map(d=>`<div class="cal-day-lbl">${d}</div>`).join('')}</div>
+    <div class="cal-grid">${cells.map(d=>{
+      if(!d)return'<div></div>';const k=byDate[d];
+      return`<div class="cal-cell${k?' '+k:''}" title="${d}${k?' — '+DAYS.find(x=>x.key===k)?.name:''}"></div>`;
+    }).join('')}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+      ${DAYS.map(d=>`<span style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:${d.color};border-radius:2px;display:inline-block;opacity:0.8"></span>${d.name}</span>`).join('')}
+    </div>`;
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function renderSettingsScreen(){document.getElementById('scriptUrl').value=settings.scriptUrl||'';document.getElementById('syncStatus').innerHTML='';}
+function onScriptUrlChange(){settings.scriptUrl=document.getElementById('scriptUrl').value.trim();saveSettings();}
+async function testSync(){
+  const url=document.getElementById('scriptUrl').value.trim();
+  if(!url){document.getElementById('syncStatus').innerHTML='<span style="color:var(--red)">Вставь URL скрипта</span>';return;}
+  settings.scriptUrl=url;saveSettings();
+  document.getElementById('syncStatus').innerHTML='<span style="color:var(--blue)">↻ Проверяем...</span>';
+  try{
+    const r=await fetch(url,{method:'POST',body:JSON.stringify({action:'ping'})});
+    const j=await r.json();
+    if(j.ok){document.getElementById('syncStatus').innerHTML='<span style="color:var(--green)">✓ Подключено! Всё работает.</span>';setSyncUI('ok','Подключено');}
+    else document.getElementById('syncStatus').innerHTML='<span style="color:var(--red)">⚠️ Скрипт ответил с ошибкой</span>';
+  }catch(e){document.getElementById('syncStatus').innerHTML='<span style="color:var(--red)">⚠️ Не удалось подключиться. Проверь URL и доступ (должен быть «Все»)</span>';}
+}
+function copyAppsScript(){
+  navigator.clipboard.writeText(APPS_SCRIPT_CODE).then(()=>showToast('Код скопирован!')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=APPS_SCRIPT_CODE;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('Код скопирован!');
+  });
+}
+function exportJSON(){
+  const data=JSON.stringify({version:1,sessions:state.sessions,current:state.current,exported:new Date().toISOString()},null,2);
+  const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(data);
+  a.download='workouts-'+todayStr()+'.json';a.click();
+}
+async function importJSON(event){
+  const file=event.target.files?.[0]; if(!file)return;
+  try{
+    const backup=JSON.parse(await file.text());
+    if(!backup||typeof backup.sessions!=='object'||!backup.sessions||!Object.values(backup.sessions).every(session=>session&&/^\d{4}-\d{2}-\d{2}$/.test(String(session.date||''))&&Array.isArray(session.exercises)&&session.exercises.every(ex=>ex&&typeof ex.name==='string'&&typeof ex.muscle==='string'&&Array.isArray(ex.sets)&&ex.sets.every(set=>set&&Number.isFinite(Number(set.reps))&&Number.isFinite(Number(set.weight))))))throw new Error('invalid');
+    if(!confirm('Заменить локальные тренировки данными из резервной копии?'))return;
+    state.sessions=backup.sessions; if(backup.current&&typeof backup.current==='object')state.current=backup.current;
+    save();renderTabs();renderExercises();showToast('Копия восстановлена');
+  }catch(e){showToast('Не удалось прочитать резервную копию JSON');}
+  finally{event.target.value='';}
+}
+function restorePreviousBackup(){
+  const backup=localStorage.getItem('wt_backup_v1'); if(!backup){showToast('Предыдущая копия ещё не создана');return;}
+  if(!confirm('Вернуть состояние приложения до последнего изменения?'))return;
+  try{state=JSON.parse(backup);localStorage.setItem('wt_v4',backup);renderTabs();renderExercises();renderHistory();showToast('Предыдущая копия восстановлена');}
+  catch(e){showToast('Локальная копия повреждена');}
+}
+function clearAll(){
+  if(!confirm('Удалить все локальные данные?'))return;
+  localStorage.removeItem('wt_v4');localStorage.removeItem('wt_backup_v1');state={activeDay:0,sessions:{},current:{}};
+  showToast('Данные удалены');renderTabs();renderExercises();
+}
+
+// ── MODALS ────────────────────────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function handleModalBg(e,id){if(e.target===document.getElementById(id))closeModal(id);}
+
+// ── LOADER ────────────────────────────────────────────────────────────────────
+function showLoader(text){const o=document.getElementById('loaderOverlay');o.classList.remove('hidden');document.getElementById('loaderText').textContent=text||'Загружаем...';}
+function hideLoader(){document.getElementById('loaderOverlay').classList.add('hidden');}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg){const t=document.getElementById('toastEl');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+let restInterval=null;
+function startRest(seconds=90){
+  const button=document.getElementById('restTimer');let remaining=seconds;
+  clearInterval(restInterval);button.classList.add('running');button.textContent='Отдых · '+remaining+' сек';
+  restInterval=setInterval(()=>{remaining--;if(remaining<=0){clearInterval(restInterval);restInterval=null;button.classList.remove('running');button.textContent='⏱ Отдых закончен · ещё 90 сек';showToast('Время отдыха вышло');if(navigator.vibrate)navigator.vibrate(120);return;}button.textContent='Отдых · '+remaining+' сек';},1000);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+renderTabs();renderExercises();
+if(settings.scriptUrl){loadFromSheets();}else{hideLoader();}
+</script>
+</body>
+</html>
