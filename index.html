@@ -544,7 +544,7 @@ function todayStr(){return localDateISO();}
 function escapeHtml(value){return String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));}
 function safeColor(value,fallback='var(--text)'){return /^#[0-9a-f]{6}$/i.test(String(value||''))?value:fallback;}
 function genId(){return Date.now()+'-'+Math.random().toString(36).slice(2,7);}
-function formatDate(d){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(d||'')))return'—';const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
+function formatDate(d){if(/^\d{2}\.\d{2}$/.test(String(d||'')))return d;if(!/^\d{4}-\d{2}-\d{2}$/.test(String(d||'')))return'—';const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
 
 // ── SYNC STATUS ───────────────────────────────────────────────────────────────
 function setSyncUI(status,label){
@@ -733,7 +733,7 @@ function renderHistory(){
       ${s.exercises.map(ex=>`
         <div class="hist-ex-row">
           <span class="hist-ex-name">${escapeHtml(ex.name)}</span>
-          <span class="hist-ex-sets">${ex.sets.filter(x=>x.done).map(x=>escapeHtml(x.reps+'×'+x.weight+(ex.weightMode==='assistance'?'кг противовеса':'кг'))).join(', ')||'—'}</span>
+          <span class="hist-ex-sets">${ex.sets.filter(x=>x.done).map(x=>escapeHtml(x.reps+'×'+(x.weight===''?'—':x.weight)+(ex.weightMode==='assistance'?'кг противовеса':'кг'))).join(', ')||'—'}</span>
         </div>`).join('')}
       <div class="hist-actions">
         <button class="hist-action-btn" data-action="edit">✏️ Изменить</button>
@@ -845,6 +845,7 @@ function renderAnalyticsCards(){
     </div>`;
 }
 function calcStreak(sessions){
+  sessions=sessions.filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(String(s.date||'')));
   if(!sessions.length)return 0;
   const weeks=new Set(sessions.map(s=>{const d=new Date(s.date),jan=new Date(d.getFullYear(),0,1);return d.getFullYear()+'-'+Math.ceil(((d-jan)/86400000+jan.getDay()+1)/7);}));
   const sorted=[...weeks].sort().reverse();
@@ -896,12 +897,13 @@ function populateExPicker(){
 function renderExStats(){
   const name=document.getElementById('exPicker').value,el=document.getElementById('exStatsWrap');
   if(!name){el.innerHTML='';return;}
-  const sessions=Object.values(state.sessions||{}).sort((a,b)=>a.date.localeCompare(b.date));
+  const sortDate=s=>{const iso=String(s.date||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(iso)return Number(iso[1])*10000+Number(iso[2])*100+Number(iso[3]);const short=String(s.date||'').match(/^(\d{2})\.(\d{2})$/);return short?Number(short[2])*100+Number(short[1]):0;};
+  const sessions=Object.values(state.sessions||{}).sort((a,b)=>sortDate(a)-sortDate(b));
   const points=[];
   sessions.forEach(s=>{
     s.exercises.forEach(ex=>{
       if(ex.name===name){
-        const done=ex.sets.filter(x=>x.done), assistance=ex.weightMode==='assistance';
+        const done=ex.sets.filter(x=>x.done&&x.weight!==''&&Number.isFinite(Number(x.weight))), assistance=ex.weightMode==='assistance';
         if(done.length) points.push({date:s.date,sets:done,weightMode:assistance?'assistance':'load',metric:assistance?Math.min(...done.map(x=>Number(x.weight))):Math.max(...done.map(x=>Number(x.weight)*(1+Number(x.reps)/30)))});
       }
     });
@@ -992,9 +994,9 @@ async function importJSON(event){
   const file=event.target.files?.[0]; if(!file)return;
   try{
     const backup=JSON.parse(await file.text());
-    if(!backup||typeof backup.sessions!=='object'||!backup.sessions||!Object.values(backup.sessions).every(session=>session&&/^\d{4}-\d{2}-\d{2}$/.test(String(session.date||''))&&Array.isArray(session.exercises)&&session.exercises.every(ex=>ex&&typeof ex.name==='string'&&typeof ex.muscle==='string'&&Array.isArray(ex.sets)&&ex.sets.every(set=>set&&Number.isFinite(Number(set.reps))&&Number.isFinite(Number(set.weight))))))throw new Error('invalid');
-    if(!confirm('Заменить локальные тренировки данными из резервной копии?'))return;
-    state.sessions=backup.sessions; if(backup.current&&typeof backup.current==='object')state.current=backup.current;
+    if(!backup||typeof backup.sessions!=='object'||!backup.sessions||!Object.values(backup.sessions).every(session=>session&&/^(?:\d{4}-\d{2}-\d{2}|\d{2}\.\d{2})$/.test(String(session.date||''))&&Array.isArray(session.exercises)&&session.exercises.every(ex=>ex&&typeof ex.name==='string'&&typeof ex.muscle==='string'&&Array.isArray(ex.sets)&&ex.sets.every(set=>set&&Number.isFinite(Number(set.reps))&&(set.weight===''||Number.isFinite(Number(set.weight)))))))throw new Error('invalid');
+    if(!confirm('Добавить тренировки из файла к локальной истории? Записи с теми же ключами обновятся.'))return;
+    state.sessions={...(state.sessions||{}),...backup.sessions}; if(backup.current&&typeof backup.current==='object')state.current={...(state.current||{}),...backup.current};
     save();renderTabs();renderExercises();showToast('Копия восстановлена');
   }catch(e){showToast('Не удалось прочитать резервную копию JSON');}
   finally{event.target.value='';}
