@@ -727,6 +727,7 @@ function dayInfoFromIndex(i) {
 }`;
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
+let progressRevision=0;
 let state=JSON.parse(localStorage.getItem('wt_v4')||'null')||{activeDay:0,sessions:{},current:{}};
 let settings=JSON.parse(localStorage.getItem('wt_settings')||'null')||{scriptUrl:''};
 if(!localStorage.getItem('wt_exercise_cleanup_v1')){
@@ -755,7 +756,6 @@ let openSelectIdx=null,customTarget=null,editSessionKey=null,editSessionData=nul
 let expandedExerciseCards=new Set();
 let historyView=localStorage.getItem('wt_history_view')||'groups';
 
-let progressRevision=0;
 function save(){
   progressRevision++;
   const current=localStorage.getItem('wt_v4');
