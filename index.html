@@ -46,6 +46,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-
 .progress-fill{height:100%;border-radius:2px;transition:width 0.4s cubic-bezier(.4,0,.2,1)}
 .ex-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:border-color 0.2s}
 .ex-card.has-done{border-color:rgba(57,211,83,0.25)}
+.ex-head-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.exercise-toggle{border:1px solid var(--border2);background:var(--bg3);color:var(--text2);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer}
+.exercise-toggle:hover{border-color:var(--blue);color:var(--text)}
+.exercise-details{display:none}
+.exercise-details.open{display:block}
 .ex-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:8px}
 .ex-name{font-size:15px;font-weight:600;color:var(--text)}
 .ex-muscle{font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:0.06em}
@@ -335,85 +340,49 @@ const DAYS=[
   {key:"chest",name:"Грудь + трицепс",label:"Грудь",color:"#FF9F43",base:[
     {name:"Жим гантелей на наклонной скамье",muscle:"Грудь / верх",sets:[[12,12],[12,16],[10,18],[8,18],[12,16]]},
     {name:"Chest Press",muscle:"Грудь",sets:[[10,40],[10,45],[10,45],[8,50]]},
-    {name:"Pectoral",muscle:"Грудь",sets:[[12,20],[12,25],[12,30]]},
+    {name:"Горизонтальное приведение плеча в тренажёре",muscle:"Грудь",sets:[[12,20],[12,25],[12,30]]},
     {name:"Разгибание рук на блоке вниз",muscle:"Трицепс",sets:[[12,10],[12,15],[12,15],[12,15]]}
   ]},
   {key:"back",name:"Спина + бицепс",label:"Спина",color:"#4A9EFF",base:[
     {name:"Подтягивания в тренажёре с противовесом",muscle:"Спина / широчайшие",weightMode:"assistance",sets:[[10,21],[7,21],[7,28]]},
     {name:"Горизонтальная тяга блока",muscle:"Спина / широчайшие",sets:[[12,30],[12,35],[10,40]]},
     {name:"Сгибание рук с EZ-грифом",muscle:"Бицепс / общий вес, гриф 10 кг",sets:[[15,10],[10,20],[7,25],[7,25]]},
-    {name:"Сгибание рук в тренажёре узким хватом",muscle:"Бицепс",sets:[[10,15],[10,15],[10,12.5],[10,12.5]]}
+    {name:"Бицепс в кроссовере",muscle:"Бицепс",sets:[[10,15],[10,15],[10,12.5],[10,12.5]]}
   ]},
   {key:"free",name:"Свободная",label:"Своб.",color:"#A78BFA",base:[
-    {name:"Планка",muscle:"Кор / пресс"},
-    {name:"Скручивания на скамье с отрицательным наклоном",muscle:"Пресс"}
+    {name:"Скручивания на скамье с отрицательным наклоном",muscle:"Пресс",sets:[]}
   ]}
 ];
 const POOLS={
   legs:[
-    {name:"Приседания в тренажёре Смита",muscle:"Ноги / квадрицепс"},
     {name:"Жим ногами в тренажёре",muscle:"Ноги / квадрицепс"},
-    {name:"Жим ногами (узкая постановка)",muscle:"Ноги / квадрицепс"},
-    {name:"Сгибание ног лёжа (бицепс бедра)",muscle:"Ноги / заднее бедро"},
-    {name:"Разгибание ног сидя (квадрицепс)",muscle:"Ноги / переднее бедро"},
-    {name:"Подъём на носки стоя (икры)",muscle:"Ноги / икры"},
-    {name:"Подъём на носки сидя (икры)",muscle:"Ноги / икры"},
-    {name:"Махи гантелями в стороны",muscle:"Плечи / средний пучок"},
-    {name:"Выпады со штангой",muscle:"Ноги / квадрицепс"},
-    {name:"Румынская тяга",muscle:"Ноги / заднее бедро"},
-    {name:"Приседания со штангой",muscle:"Ноги / квадрицепс"},
-    {name:"Болгарские выпады",muscle:"Ноги / квадрицепс"},
-    {name:"Гакк-приседания",muscle:"Ноги / квадрицепс"},
-    {name:"Сведение ног в тренажёре",muscle:"Ноги / приводящие"},
-    {name:"Разведение ног в тренажёре",muscle:"Ноги / отводящие"}
+    {name:"Сгибание ног сидя",muscle:"Ноги / заднее бедро"},
+    {name:"Сгибание ног лёжа",muscle:"Ноги / заднее бедро"},
+    {name:"Разгибание ног в тренажёре",muscle:"Ноги / переднее бедро"},
+    {name:"Жим гантелей сидя",muscle:"Плечи"}
   ],
   chest:[
-    {name:"Жим штанги лёжа",muscle:"Грудь / трицепс"},
-    {name:"Жим гантелей лёжа",muscle:"Грудь"},
-    {name:"Сведение рук в кроссовере",muscle:"Грудь / внутренняя часть"},
-    {name:"Жим гантелей в наклоне",muscle:"Грудь / верхний пучок"},
-    {name:"Жим штанги в наклоне",muscle:"Грудь / верхний пучок"},
-    {name:"Жим в грудном тренажёре (Хаммер)",muscle:"Грудь / средняя часть"},
-    {name:"Разгибание рук в блоке сидя (трицепс)",muscle:"Трицепс"},
-    {name:"Тяга верёвки вниз (трицепс)",muscle:"Трицепс"},
-    {name:"Французский жим со штангой",muscle:"Трицепс"},
-    {name:"Жим штанги узким хватом",muscle:"Трицепс / грудь"},
-    {name:"Разводка гантелей лёжа",muscle:"Грудь"},
-    {name:"Отжимания на брусьях",muscle:"Грудь / трицепс"},
-    {name:"Пуловер с гантелей",muscle:"Грудь / широчайшие"}
+    {name:"Жим гантелей на наклонной скамье",muscle:"Грудь / верх"},
+    {name:"Жим от груди в рычажном тренажёре",muscle:"Грудь"},
+    {name:"Chest Press",muscle:"Грудь"},
+    {name:"Горизонтальное приведение плеча в тренажёре",muscle:"Грудь"},
+    {name:"Сведения рук в кроссовере сверху",muscle:"Грудь"},
+    {name:"Dip Machine",muscle:"Трицепс"},
+    {name:"Разгибание рук с канатом из-за головы",muscle:"Трицепс"},
+    {name:"Разгибание рук на блоке вниз",muscle:"Трицепс"}
   ],
   back:[
     {name:"Подтягивания в тренажёре с противовесом",muscle:"Спина / широчайшие",weightMode:"assistance"},
     {name:"Горизонтальная тяга блока",muscle:"Спина / широчайшие"},
-    {name:"Сгибание рук с EZ-грифом",muscle:"Бицепс"},
-    {name:"Гиперэкстензия",muscle:"Спина / поясница"},
-    {name:"Подтягивания",muscle:"Спина / широчайшие"},
+    {name:"Вертикальная тяга блока",muscle:"Спина / широчайшие"},
     {name:"Тяга штанги в наклоне",muscle:"Спина / широчайшие"},
-    {name:"Тяга горизонтального блока",muscle:"Спина / широчайшие"},
-    {name:"Тяга вертикального блока",muscle:"Спина / широчайшие"},
-    {name:"Тяга гантели одной рукой",muscle:"Спина / широчайшие"},
-    {name:"Тяга Т-грифа",muscle:"Спина / широчайшие"},
-    {name:"Сгибание рук со штангой (бицепс)",muscle:"Бицепс"},
-    {name:"Сгибание рук в тренажёре (бицепс)",muscle:"Бицепс"},
-    {name:"Сгибание рук с гантелями (бицепс)",muscle:"Бицепс"},
-    {name:"Молотковые сгибания",muscle:"Бицепс / брахиалис"},
-    {name:"Шраги со штангой",muscle:"Трапеции"},
-    {name:"Тяга к поясу в тренажёре",muscle:"Спина / широчайшие"},
-    {name:"Пулловер в блоке",muscle:"Спина / широчайшие"}
+    {name:"Гиперэкстензия",muscle:"Спина / поясница"},
+    {name:"Сгибание рук с EZ-грифом",muscle:"Бицепс / общий вес, гриф 10 кг"},
+    {name:"Сгибание рук на бицепс в тренажёре",muscle:"Бицепс"},
+    {name:"Бицепс в кроссовере",muscle:"Бицепс"}
   ],
   free:[
-    {name:"Планка",muscle:"Кор / пресс"},
-    {name:"Скручивания на пресс",muscle:"Пресс"},
-    {name:"Подъём ног в висе",muscle:"Пресс / нижний"},
-    {name:"Жим гантелей стоя",muscle:"Плечи"},
-    {name:"Жим штанги стоя",muscle:"Плечи"},
-    {name:"Тяга к подбородку",muscle:"Плечи / трапеции"},
-    {name:"Становая тяга",muscle:"Спина / ноги"},
-    {name:"Кардио (беговая дорожка)",muscle:"Кардио"},
-    {name:"Кардио (велотренажёр)",muscle:"Кардио"},
-    {name:"Кардио (эллипс)",muscle:"Кардио"},
-    {name:"Берпи",muscle:"Всё тело"},
-    {name:"Отжимания",muscle:"Грудь / трицепс"}
+    {name:"Скручивания на скамье с отрицательным наклоном",muscle:"Пресс"}
   ]
 };
 
@@ -611,12 +580,24 @@ function dayInfoFromIndex(i) {
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let state=JSON.parse(localStorage.getItem('wt_v4')||'null')||{activeDay:0,sessions:{},current:{}};
 let settings=JSON.parse(localStorage.getItem('wt_settings')||'null')||{scriptUrl:''};
+if(!localStorage.getItem('wt_exercise_cleanup_v1')){
+  const allowedExercises=new Set(Object.values(POOLS).flat().map(ex=>ex.name));
+  const aliases={Pectoral:'Горизонтальное приведение плеча в тренажёре'};
+  Object.entries(state.current||{}).forEach(([di,day])=>{
+    const kept=(day.exercises||[]).filter(ex=>allowedExercises.has(aliases[ex.name]||ex.name)).map(ex=>({...ex,name:aliases[ex.name]||ex.name}));
+    if(kept.length)day.exercises=kept;
+    else if(DAYS[Number(di)]?.base?.length)day.exercises=DAYS[Number(di)].base.map(ex=>({name:ex.name,muscle:ex.muscle,weightMode:ex.weightMode||'load',sets:(ex.sets||[]).map(([reps,weight])=>({reps,weight,done:false}))}));
+  });
+  save();
+  localStorage.setItem('wt_exercise_cleanup_v1','done');
+}
 // Replace only pristine 10×20 starter drafts from older versions; never overwrite edited or completed sets.
 Object.entries(state.current||{}).forEach(([di,day])=>{
   const untouched=(day.exercises||[]).length>0&&day.exercises.every(ex=>(ex.sets||[]).length>0&&ex.sets.every(set=>Number(set.reps)===10&&Number(set.weight)===20&&!set.done));
   if(untouched) delete state.current[di];
 });
 let openSelectIdx=null,customTarget=null,editSessionKey=null,editSessionData=null;
+let expandedExerciseCards=new Set();
 
 function save(){
   const current=localStorage.getItem('wt_v4');
@@ -693,7 +674,7 @@ function initDay(di){
   if(!state.current[di]){
     state.current[di]={date:todayStr(),exercises:DAYS[di].base.map(ex=>({
       name:ex.name,muscle:ex.muscle,weightMode:ex.weightMode||'load',
-      sets:(ex.sets||[[10,20],[10,20],[10,20]]).map(([reps,weight])=>({reps,weight,done:false}))
+      sets:(ex.sets||[]).map(([reps,weight])=>({reps,weight,done:false}))
     }))};
     save();
   }
@@ -716,11 +697,16 @@ function renderExercises(){
   exs.forEach(ex=>ex.sets.forEach(s=>{total++;if(s.done)done++;}));
   document.getElementById('progressFill').style.width=total?Math.round(done/total*100)+'%':'0%';
   const pool=POOLS[day.key];
-  document.getElementById('exerciseList').innerHTML=exs.map((ex,ei)=>`
+  document.getElementById('exerciseList').innerHTML=exs.map((ex,ei)=>{
+    const cardKey=di+':'+ei,expanded=expandedExerciseCards.has(cardKey),doneSets=ex.sets.filter(s=>s.done).length;
+    return `
     <div class="ex-card${ex.sets.some(s=>s.done)?' has-done':''}">
       <div class="ex-top">
         <div><div class="ex-name">${escapeHtml(ex.name)}</div><div class="ex-muscle">${escapeHtml(ex.muscle)}</div></div>
-        <button class="replace-btn" onclick="toggleSel(${di},${ei})">⇄</button>
+        <div class="ex-head-actions">
+          <button class="exercise-toggle" aria-expanded="${expanded}" onclick="toggleExercise(${di},${ei})">${expanded?'Свернуть':'Подходы · '+ex.sets.length+' ↓'}${doneSets?' · ✓ '+doneSets:''}</button>
+          <button class="replace-btn" aria-label="Заменить упражнение" onclick="toggleSel(${di},${ei})">⇄</button>
+        </div>
       </div>
       <div class="sel-wrap${openSelectIdx===ei?' open':''}" id="sel_${ei}">
         <select id="selEx_${ei}">
@@ -733,6 +719,7 @@ function renderExercises(){
           <button class="sel-btn ok" onclick="confirmSel(${di},${ei})">Заменить</button>
         </div>
       </div>
+      <div class="exercise-details${expanded?' open':''}">
       <div class="sets-grid">
         <div class="col-hdr">#</div><div class="col-hdr">Повт</div><div class="col-hdr">${ex.weightMode==='assistance'?'Противовес':'Вес, кг'}</div><div class="col-hdr">✓</div>
         ${ex.sets.map((s,si)=>`
@@ -743,13 +730,16 @@ function renderExercises(){
         `).join('')}
       </div>
       <button class="add-set-btn" onclick="addSet(${di},${ei})">+ подход</button>
-    </div>`).join('');
+      </div>
+    </div>`;
+  }).join('');
 }
-function switchDay(i){state.activeDay=i;openSelectIdx=null;save();renderTabs();renderExercises();}
+function switchDay(i){state.activeDay=i;openSelectIdx=null;expandedExerciseCards.clear();save();renderTabs();renderExercises();}
+function toggleExercise(di,ei){const key=di+':'+ei;if(expandedExerciseCards.has(key))expandedExerciseCards.delete(key);else expandedExerciseCards.add(key);renderExercises();}
 function onDateChange(){const di=state.activeDay;initDay(di);state.current[di].date=document.getElementById('workoutDate').value;save();}
 function upd(di,ei,si,f,v){state.current[di].exercises[ei].sets[si][f]=parseFloat(v)||0;save();}
 function toggleSet(di,ei,si){state.current[di].exercises[ei].sets[si].done^=1;save();renderExercises();}
-function addSet(di,ei){const s=state.current[di].exercises[ei].sets,l=s[s.length-1];s.push({reps:l.reps,weight:l.weight,done:false});save();renderExercises();}
+function addSet(di,ei){const s=state.current[di].exercises[ei].sets,l=s[s.length-1]||{reps:10,weight:0};s.push({reps:l.reps,weight:l.weight,done:false});expandedExerciseCards.add(di+':'+ei);save();renderExercises();}
 function toggleSel(di,ei){openSelectIdx=openSelectIdx===ei?null:ei;renderExercises();}
 function cancelSel(){openSelectIdx=null;renderExercises();}
 function confirmSel(di,ei){
@@ -758,7 +748,7 @@ function confirmSel(di,ei){
   if(val==='__custom__'){customTarget={di,ei};document.getElementById('custName').value='';document.getElementById('custMuscle').value='';openModal('customModal');return;}
   const found=POOLS[DAYS[di].key].find(e=>e.name===val);
   if(found){state.current[di].exercises[ei].name=found.name;state.current[di].exercises[ei].muscle=found.muscle;state.current[di].exercises[ei].weightMode=found.weightMode||'load';state.current[di].exercises[ei].sets.forEach(s=>s.done=false);save();}
-  openSelectIdx=null;renderExercises();
+  expandedExerciseCards.delete(di+':'+ei);openSelectIdx=null;renderExercises();
 }
 function saveCustomModal(){
   const name=document.getElementById('custName').value.trim(),muscle=document.getElementById('custMuscle').value.trim();
@@ -766,7 +756,7 @@ function saveCustomModal(){
   const{di,ei}=customTarget;
   state.current[di].exercises[ei].name=name;state.current[di].exercises[ei].muscle=muscle||'';state.current[di].exercises[ei].weightMode='load';
   state.current[di].exercises[ei].sets.forEach(s=>s.done=false);
-  save();closeModal('customModal');openSelectIdx=null;renderExercises();
+  save();closeModal('customModal');expandedExerciseCards.delete(di+':'+ei);openSelectIdx=null;renderExercises();
 }
 
 async function finishWorkout(){
