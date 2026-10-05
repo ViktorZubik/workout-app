@@ -1,4 +1,4 @@
-const CACHE = 'workout-v6';
+const CACHE = 'workout-v7';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.svg', './icon-512.svg'];
 
 self.addEventListener('install', event => {
