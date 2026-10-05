@@ -65,3 +65,10 @@ test('exercise summary reports max reps for zero-weight training',()=>{
   assert.equal(exercise[0].maxReps,15);
   assert.equal(exercise[0].tonnage,0);
 });
+
+test('pull-up sets are excluded while their date still counts as a workout',()=>{
+  const onlyPullups={'2026-08-28-2':{date:'28.08',exercises:[{name:'Подтягивания в тренажёре с противовесом',weightMode:'assistance',sets:[{reps:6,weight:21,done:true}]}]}};
+  const rows=P.dateEntries(onlyPullups),days=P.workoutDates(Object.values(onlyPullups));
+  const result=P.summary(rows,'2026-08-28','2026-08-28',3,days);
+  assert.equal(rows.length,0);assert.equal(result.workouts,1);assert.equal(result.sets,0);assert.equal(result.tonnage,0);
+});
