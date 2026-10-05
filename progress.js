@@ -67,6 +67,10 @@
   function dateLabel(iso) {
     const p=parseDate(iso,null);return p?String(p.day).padStart(2,'0')+'.'+String(p.month).padStart(2,'0'):'—';
   }
+  function workoutDates(sessions, yearForShortDates=2026) {
+    const list=Array.isArray(sessions)?sessions:Object.values(sessions||{});
+    return [...new Set(list.map(s=>isoDate(s.date,yearForShortDates)).filter(Boolean))].sort();
+  }
   function dateEntries(sessions, options={}) {
     const year=options.yearForShortDates===undefined?2026:options.yearForShortDates;
     const exclude=options.excludePullups!==false;
@@ -138,19 +142,19 @@
     return {start,end:asOf,previousStart,previousEnd};
   }
   function filterRange(entries,start,end) { return entries.filter(e=>e.date>=start&&e.date<=end); }
-  function summary(entries,start,end,goal=3) {
+  function summary(entries,start,end,goal=3,allWorkoutDates=null) {
     const selected=filterRange(entries,start,end);
-    const dates=new Set(selected.map(e=>e.date));
-    return {workouts:dates.size,tonnage:tonnage(selected),sets:selected.length};
+    const dates=allWorkoutDates?allWorkoutDates.filter(d=>d>=start&&d<=end):[...new Set(selected.map(e=>e.date))];
+    return {workouts:dates.length,tonnage:tonnage(selected),sets:selected.length};
   }
   function mondayOf(iso) {
     const d=dateValue(iso),weekday=(new Date(d).getUTCDay()+6)%7;
     return isoFromValue(d-weekday*86400000);
   }
-  function weeklyBuckets(entries,start,end,goal=3) {
+  function weeklyBuckets(entries,start,end,goal=3,allWorkoutDates=null) {
     if(dateValue(start)>dateValue(end))return [];
     const counts=new Map();
-    filterRange(entries,start,end).forEach(e=>counts.set(mondayOf(e.date),(counts.get(mondayOf(e.date))||new Set()).add(e.date)));
+    (allWorkoutDates?allWorkoutDates.filter(d=>d>=start&&d<=end):filterRange(entries,start,end).map(e=>e.date)).forEach(date=>counts.set(mondayOf(date),(counts.get(mondayOf(date))||new Set()).add(date)));
     const first=mondayOf(start),last=mondayOf(end),buckets=[];
     for(let d=dateValue(first),lastMs=dateValue(last);d<=lastMs;d+=7*86400000){
       const weekStart=isoFromValue(d),dates=counts.get(weekStart)||new Set();
@@ -160,8 +164,8 @@
     }
     return buckets;
   }
-  function streaks(entries,goal=3,asOfISO) {
-    const dates=[...new Set(entries.map(e=>e.date))].sort();
+  function streaks(entries,goal=3,asOfISO,allWorkoutDates=null) {
+    const dates=allWorkoutDates?[...new Set(allWorkoutDates)].sort():[...new Set(entries.map(e=>e.date))].sort();
     if(!dates.length)return {current:0,best:0};
     const asOf=asOfISO||dates[dates.length-1],counts=new Map();
     dates.forEach(date=>{const w=mondayOf(date);counts.set(w,(counts.get(w)||0)+1);});
@@ -251,10 +255,10 @@
     const p=parseDate(asOf,null);return {start:toISO({year:p.year,month:p.month,day:1}),end:asOf};
   }
   function periodLengthWeeks(start,end) { return Math.max(1,(Math.floor((dateValue(end)-dateValue(start))/86400000)+1)/7); }
-  function summarizePeriod(entries,period,asOfISO,goal=3) {
-    const bounds=periodBounds(period,asOfISO,entries),current=summary(entries,bounds.start,bounds.end,goal),previous=summary(entries,bounds.previousStart,bounds.previousEnd,goal);
-    const weekly=weeklyBuckets(entries,bounds.start,bounds.end,goal),streak=streaks(entries,goal,asOfISO);
-    const previousStreak=streaks(filterRange(entries,bounds.previousStart,bounds.previousEnd),goal,bounds.previousEnd);
+  function summarizePeriod(entries,period,asOfISO,goal=3,allWorkoutDates=null) {
+    const bounds=periodBounds(period,asOfISO,entries),current=summary(entries,bounds.start,bounds.end,goal,allWorkoutDates),previous=summary(entries,bounds.previousStart,bounds.previousEnd,goal,allWorkoutDates);
+    const weekly=weeklyBuckets(entries,bounds.start,bounds.end,goal,allWorkoutDates),streak=streaks(entries,goal,asOfISO,allWorkoutDates);
+    const previousStreak=streaks(filterRange(entries,bounds.previousStart,bounds.previousEnd),goal,bounds.previousEnd,allWorkoutDates?.filter(d=>d>=bounds.previousStart&&d<=bounds.previousEnd));
     return {bounds,current,previous,deltas:{workouts:relativeDelta(current.workouts,previous.workouts),tonnage:relativeDelta(current.tonnage,previous.tonnage),sets:relativeDelta(current.sets,previous.sets),currentStreak:relativeDelta(streak.current,previousStreak.current),bestStreak:relativeDelta(streak.best,previousStreak.best)},streak,weekly,goalMetWeeks:weekly.filter(w=>w.met).length,goalWeekPercent:weekly.length?weekly.filter(w=>w.met).length/weekly.length*100:0};
   }
   function summarizeExercise(entries,exercise,start,end,metric='weight') {
@@ -268,13 +272,13 @@
     const gain=firstValue!==null&&lastValue!==null?lastValue-firstValue:null;
     return {workouts,stats,series,records,lastTen,first,firstValue,gain,gainPercent:firstValue>0&&gain!==null?gain/firstValue*100:null};
   }
-  function weeklyDigest(entries,asOf,goal=3) {
-    const range=weekRange(asOf),selected=filterRange(entries,range.start,range.end),records=personalRecords(workoutSeries(entries)).filter(r=>r.date>=range.start&&r.date<=range.end);
-    return {range,summary:summary(entries,range.start,range.end,goal),records,improving:topProgress(entries,range.start,range.end),stalled:stalledExercises(entries,asOf)};
+  function weeklyDigest(entries,asOf,goal=3,allWorkoutDates=null) {
+    const range=weekRange(asOf),records=personalRecords(workoutSeries(entries)).filter(r=>r.date>=range.start&&r.date<=range.end);
+    return {range,summary:summary(entries,range.start,range.end,goal,allWorkoutDates),records,improving:topProgress(entries,range.start,range.end),stalled:stalledExercises(entries,asOf)};
   }
-  function monthlyDigest(entries,asOf,goal=3) {
+  function monthlyDigest(entries,asOf,goal=3,allWorkoutDates=null) {
     const range=monthRange(asOf),records=personalRecords(workoutSeries(entries)).filter(r=>r.date>=range.start&&r.date<=range.end);
-    return {range,summary:summary(entries,range.start,range.end,goal),records,improving:topProgress(entries,range.start,range.end),stalled:stalledExercises(entries,asOf)};
+    return {range,summary:summary(entries,range.start,range.end,goal,allWorkoutDates),records,improving:topProgress(entries,range.start,range.end),stalled:stalledExercises(entries,asOf)};
   }
   function topProgress(entries,start,end) {
     const names=[...new Set(entries.map(e=>e.exercise))],rows=[];
@@ -306,5 +310,5 @@
     let key=null,value=null;
     return {get(nextKey,calculate){if(nextKey!==key){key=nextKey;value=calculate();}return value;},clear(){key=null;value=null;}};
   }
-  return {MUSCLE_GROUPS,DEFAULT_EXERCISE_MUSCLES,PERIODS,isExcludedExercise,numberOrNull,parseDate,isoDate,dateLabel,dateEntries,estimatedOneRepMax,isLoaded,tonnage,workoutSeries,periodBounds,filterRange,summary,weeklyBuckets,streaks,relativeDelta,getExerciseOptions,exerciseWorkouts,metricValue,exercisePersonalStats,personalRecords,muscleDistribution,groupWeeklyAverages,weekRange,monthRange,periodLengthWeeks,summarizePeriod,summarizeExercise,weeklyDigest,monthlyDigest,muscleImbalances,createMemo};
+  return {MUSCLE_GROUPS,DEFAULT_EXERCISE_MUSCLES,PERIODS,isExcludedExercise,numberOrNull,parseDate,isoDate,dateLabel,workoutDates,dateEntries,estimatedOneRepMax,isLoaded,tonnage,workoutSeries,periodBounds,filterRange,summary,weeklyBuckets,streaks,relativeDelta,getExerciseOptions,exerciseWorkouts,metricValue,exercisePersonalStats,personalRecords,muscleDistribution,groupWeeklyAverages,weekRange,monthRange,periodLengthWeeks,summarizePeriod,summarizeExercise,weeklyDigest,monthlyDigest,muscleImbalances,createMemo};
 });
