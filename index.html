@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Тренировки</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0F1923">
+<meta name="theme-color" content="#f1f0ed">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Тренировки">
 <link rel="apple-touch-icon" href="icon-192.svg">
 <style>
@@ -192,7 +192,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-
 .toast.show{opacity:1}
 .empty-state{text-align:center;padding:60px 20px;color:var(--text3);font-size:15px;line-height:1.6}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
-.cal-cell{aspect-ratio:1;border-radius:3px;background:var(--bg3)}
+.cal-cell{aspect-ratio:1;border-radius:3px;background:var(--bg3)}.cal-cell.worked{background:#191917}
 .cal-cell.legs{background:#39D353;opacity:0.8}
 .cal-cell.chest{background:#FF9F43;opacity:0.8}
 .cal-cell.back{background:#4A9EFF;opacity:0.8}
@@ -272,6 +272,27 @@ body.history-light .modal-btns button{background:#f4f3f0;color:#383631;border-co
 body.history-light .modal-btns .primary{background:#171715;color:#fff;border-color:#171715}
 @media(max-width:480px){body.history-light #historyScreen .app{padding-left:16px;padding-right:16px}body.history-light .history-activity{padding:16px 13px}body.history-light .history-group-card{padding:15px 10px}}
 
+
+/* Unified light app palette */
+:root{--bg:#f1f0ed;--bg2:#fff;--bg3:#ecebe7;--bg4:#e5e3de;--text:#191917;--text2:#696761;--text3:#96938d;--green:#4e815e;--green-bg:#e9f1e9;--red:#c85345;--blue:#527e9d;--orange:#b77d38;--purple:#8f79a4;--border:#e9e7e3;--border2:#dedcd6}
+body{background:#f1f0ed;color:#191917;letter-spacing:.005em}
+.screen{background:#f1f0ed;color:#191917}.app{color:#191917}
+.bottom-nav{background:rgba(250,249,247,.96);border-top-color:#e4e2de}.bottom-nav .nav-item{color:#9b9891}.bottom-nav .nav-item.active{color:#e46f5b}
+.ex-card,.chart-wrap,.analytics-card,.settings-card{background:#fff;border-color:#e9e7e3;box-shadow:0 5px 20px rgba(25,23,18,.035)}
+.ex-card.has-done{border-color:#bfd5c3}.day-tab{background:#fff;color:#696761;border-color:#dedcd6}.day-tab.active{color:#fff!important;background:#191917!important}.day-tab.done{border-color:#78916b;color:#4e815e}
+.date-row,.set-input,.edit-set-input,.settings-input,.ex-picker,.modal-input{background:#fff;color:#191917;border-color:#e5e3df;color-scheme:light}
+.date-row label,.set-label,.ex-muscle{color:#85817a}.exercise-toggle{background:#f6f5f2;color:#5a5751;border-color:#e5e3df}
+.finish-btn{background:#191917;color:#fff;box-shadow:0 5px 15px rgba(0,0,0,.1)}.rest-btn{background:#fff;color:#527e9d;border-color:#d6e2eb}.rest-btn.running{background:#edf4ee;color:#4e815e}
+.modal{background:#fff;color:#191917}.modal h2,.edit-ex-title{color:#191917}.modal-btns button{background:#f4f3f0;color:#383631;border-color:#e5e3df}.modal-btns .primary{background:#191917;color:#fff;border-color:#191917}
+.toast{background:#191917;color:#fff;border:0}.progress-wrap{background:#e5e3de}.cal-cell{background:#e9e8e5}.cal-cell.legs{background:#78916b}.cal-cell.chest{background:#df745d}.cal-cell.back{background:#527e9d}.cal-cell.free{background:#a997bd}
+#statsScreen .page-title,#workoutScreen .page-title,#settingsScreen .page-title{color:#191917}
+.p-section{margin:0 0 26px}.p-period-row{overflow-x:auto;margin:-4px 0 22px}.p-periods{display:flex;gap:5px;width:max-content;padding:4px;background:#e8e7e4;border-radius:999px}.p-period{border:0;background:transparent;color:#77746e;border-radius:999px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer}.p-period.active{background:#191917;color:#fff;box-shadow:0 2px 7px #0002}
+.p-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}.p-section h2{font-size:18px;letter-spacing:-.025em;color:#191917}.p-section h3{font-size:14px;color:#191917}.p-section-head p,.p-chart-caption,.p-guideline{color:#96938d;font-size:12px;margin-top:4px}
+.p-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.p-card{background:#fff;border:1px solid #e9e7e3;border-radius:19px;box-shadow:0 5px 20px rgba(25,23,18,.035)}.p-stat{padding:14px;min-width:0}.p-stat>span{display:block;color:#85817a;font-size:11px;margin-bottom:9px}.p-stat strong{display:block;color:#191917;font-size:22px;letter-spacing:-.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.p-stat strong small{font-size:11px;color:#8e8a83;font-weight:500}.p-delta{display:block;font-size:11px;margin-top:7px}.p-delta.up{color:#4e815e}.p-delta.down{color:#c85345}.p-delta.neutral{color:#aaa79f}.p-goal{white-space:nowrap;font-size:11px;color:#85817a}.p-goal input{width:46px;padding:7px;border:1px solid #e5e3df;border-radius:9px;background:#fff;text-align:center;color:#191917}
+.p-chart-card,.p-ex-chart,.p-table-card{padding:15px}.p-chart-scroll{overflow-x:auto}.p-chart-scroll svg{display:block;min-width:420px;width:100%;height:auto}.p-legend{display:flex;gap:15px;flex-wrap:wrap;margin-top:8px;color:#85817a;font-size:11px}.p-legend span{display:flex;align-items:center;gap:6px}.p-legend i{width:9px;height:9px;background:#191917;border-radius:3px}.p-legend-target{color:#ad5948}.p-activity-host{margin-top:16px}.p-activity-host #calendarChart{background:#fff;border:1px solid #e9e7e3;border-radius:19px;padding:16px}
+.p-ex-picker{padding:13px 15px;margin-bottom:10px}.p-ex-picker label{display:block;font-size:11px;color:#85817a;margin-bottom:6px}.p-ex-picker input{width:100%;border:0;outline:0;background:transparent;color:#191917;font:600 15px inherit}.p-metric-switch{display:flex;gap:6px;overflow-x:auto;margin:12px 0}.p-metric-switch button{white-space:nowrap;border:1px solid #e5e3df;border-radius:999px;background:#fff;color:#77746e;padding:9px 12px;font:600 11px inherit}.p-metric-switch button.active{background:#191917;color:white;border-color:#191917}.p-chart-caption{text-align:center}.p-ex-cards{grid-template-columns:repeat(2,minmax(0,1fr));margin:10px 0}.p-small-stat strong{font-size:15px;white-space:normal;line-height:1.35}.p-table-card h3{margin-bottom:12px}.p-table-scroll{overflow-x:auto}.p-table{border-collapse:collapse;width:100%;font-size:12px}.p-table th,.p-table td{padding:10px 8px;text-align:left;border-bottom:1px solid #eeece8;vertical-align:top}.p-table th{background:#f8f7f5;color:#85817a;font-size:10px;font-weight:600}.p-table td{color:#292825}.p-table td:nth-child(2){min-width:175px}.p-empty{text-align:center;padding:20px;color:#85817a;font-size:13px;line-height:1.5}.p-record-list{display:grid}.p-record-row{display:grid;grid-template-columns:9px 1fr auto;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #eeece8}.p-record-row:last-child{border-bottom:0}.p-record-dot{width:8px;height:8px;background:#df745d;border-radius:50%}.p-record-row b{display:block;font-size:12px;font-weight:650;color:#292825}.p-record-row small{display:block;font-size:10px;color:#96938d;margin-top:4px}.p-record-row strong{font-size:11px;color:#4d4a45;text-align:right}.p-muscle-grid{padding:16px;display:grid;grid-template-columns:1fr;gap:22px}.p-donut{width:150px;height:150px;border-radius:50%;margin:16px auto;display:grid;place-items:center}.p-donut>div{width:98px;height:98px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}.p-donut b{font-size:17px}.p-donut span{font-size:10px;color:#96938d}.p-muscle-legend{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:10px;color:#696761}.p-muscle-legend span{display:flex;align-items:center;gap:5px}.p-muscle-legend i{width:8px;height:8px;border-radius:50%}.p-group-bars{margin-top:13px;display:grid;gap:13px}.p-group-row{display:grid;grid-template-columns:65px 1fr 30px;gap:8px;align-items:center;font-size:10px;color:#696761}.p-group-track{height:10px;border-radius:999px;background:#f0efec;position:relative;overflow:hidden}.p-group-track>i{position:absolute;left:0;top:0;height:100%;border-radius:999px}.p-group-track>em{position:absolute;left:40%;width:40%;top:0;bottom:0;border-left:1px dashed #9996;border-right:1px dashed #9996;pointer-events:none}.p-group-row>b{text-align:right;font-size:10px;color:#292825}.p-notice{background:#fff7e8;border:1px solid #f0dfbd;color:#775b2c;border-radius:14px;padding:12px;margin-top:10px;font-size:12px}.p-notice button{border:0;background:#191917;color:#fff;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:600;cursor:pointer;margin-left:5px}.p-unassigned #groupEditor{padding-top:10px}.p-unassigned #groupEditor label{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid #eedfca;padding:8px 0}.p-unassigned select{border:1px solid #e1d4bd;border-radius:8px;background:#fff;padding:7px}.p-digest-grid{display:grid;gap:10px}.p-digest{padding:16px}.p-digest>p{font-size:11px;color:#96938d;margin:5px 0 12px}.p-digest-numbers{display:flex;gap:18px;margin-bottom:12px;font-size:11px;color:#85817a}.p-digest-numbers b{display:block;font-size:21px;color:#191917}.p-digest small{display:block;color:#696761;font-size:11px;line-height:1.55;margin-top:5px}
+@media(min-width:620px){.p-summary-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.p-muscle-grid{grid-template-columns:1fr 1.15fr}.p-digest-grid{grid-template-columns:1fr 1fr}}
+
 </style>
 </head>
 <body>
@@ -320,27 +341,8 @@ body.history-light .modal-btns .primary{background:#171715;color:#fff;border-col
 <!-- STATS -->
 <div id="statsScreen" class="screen">
 <div class="app">
-  <div class="page-header"><div class="page-title">📊 Прогресс</div></div>
-
-  <div class="analytics-grid" id="analyticsGrid"></div>
-
-  <div class="stats-section">
-    <div class="stats-title">Активность по месяцам</div>
-    <div class="chart-wrap" id="monthlyChart"></div>
-  </div>
-
-  <div class="stats-section">
-    <div class="stats-title">Прогресс по упражнению</div>
-    <select class="ex-picker" id="exPicker" onchange="renderExStats()">
-      <option value="">— выбери упражнение —</option>
-    </select>
-    <div id="exStatsWrap"></div>
-  </div>
-
-  <div class="stats-section">
-    <div class="stats-title">Календарь</div>
-    <div class="chart-wrap" id="calendarChart"></div>
-  </div>
+  <div class="page-header"><div class="page-title">Прогресс</div></div>
+  <div id="progressRoot" aria-live="polite"></div>
 </div>
 </div>
 
@@ -365,7 +367,7 @@ body.history-light .modal-btns .primary{background:#171715;color:#fff;border-col
       <b style="color:var(--text)">1.</b> Открой Apps Script своей таблицы<br>
       <b style="color:var(--text)">2.</b> Замени весь код (кнопка ниже скопирует новый)<br>
       <b style="color:var(--text)">3.</b> Сохрани и задеплой заново: «Развернуть» → «Управление развёртываниями» → ✏️ → выбери «Новая версия» → Сохранить<br>
-      <b style="color:var(--text)">4.</b> URL остаётся тем же. Формат твоей таблицы менять не нужно: история загрузится из колонок «Дата», «Группа мышц», «Упражнение», «№ подхода», «Повторы», «Вес (кг)», а новые тренировки будут сохраняться туда же.
+      <b style="color:var(--text)">4.</b> URL остаётся тем же. Лист «Группы мышц» создастся автоматически для справочника упражнений. Формат журнала менять не нужно: история загрузится из колонок «Дата», «Группа мышц», «Упражнение», «№ подхода», «Повторы», «Вес (кг)», а новые тренировки будут сохраняться туда же.
     </div>
     <button class="settings-btn btn-green" style="margin-top:12px" onclick="copyAppsScript()">📋 Скопировать новый код</button>
   </div>
@@ -421,6 +423,7 @@ body.history-light .modal-btns .primary{background:#171715;color:#fff;border-col
   </div>
 </div>
 
+<script src="progress.js"></script>
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const DAYS=[
@@ -505,8 +508,25 @@ function doGet(e) {
         readAppRows(sheet, values, ss, sessions);
       }
     });
-    return output({ok:true, sessions:sessions});
+    var muscleGroups=readMuscleGroups(ss);
+    return output({ok:true, sessions:sessions, muscleGroups:muscleGroups});
   } catch(err) { return output({ok:false, error:String(err)}); }
+}
+function readMuscleGroups(ss) {
+  var sheet=ss.getSheetByName('Группы мышц');
+  if(!sheet) { sheet=ss.insertSheet('Группы мышц'); sheet.appendRow(['Упражнение','Группа мышц']); sheet.setFrozenRows(1); sheet.getRange(1,1,1,2).setFontWeight('bold'); }
+  if(sheet.getLastRow()<2) return {};
+  var values=sheet.getRange(2,1,sheet.getLastRow()-1,2).getDisplayValues(), out={};
+  values.forEach(function(row){var name=String(row[0]||'').trim(),group=String(row[1]||'').trim();if(name&&group)out[name]=group;});
+  return out;
+}
+function saveMuscleGroups(ss, groups) {
+  var sheet=ss.getSheetByName('Группы мышц');
+  if(!sheet) sheet=ss.insertSheet('Группы мышц');
+  sheet.clearContents();sheet.getRange(1,1,1,2).setValues([['Упражнение','Группа мышц']]);
+  sheet.setFrozenRows(1);sheet.getRange(1,1,1,2).setFontWeight('bold');
+  var rows=Object.keys(groups||{}).sort().filter(function(name){return String(groups[name]||'').trim();}).map(function(name){return [name,String(groups[name]).trim()];});
+  if(rows.length)sheet.getRange(2,1,rows.length,2).setValues(rows);
 }
 function findHeader(headers, options) {
   for (var i = 0; i < headers.length; i++) {
@@ -594,6 +614,7 @@ function doPost(e) {
   try {
     var ss=SpreadsheetApp.getActiveSpreadsheet(), data=JSON.parse(e.postData.contents), action=data.action;
     if (action==='ping') return output({ok:true});
+    if(action==='saveGroups'){saveMuscleGroups(ss,data.groups||{});return output({ok:true});}
     var journal=null, appSheet=null;
     ss.getSheets().forEach(function(sheet) {
       if (sheet.getLastRow()<1) return;
@@ -693,7 +714,9 @@ let openSelectIdx=null,customTarget=null,editSessionKey=null,editSessionData=nul
 let expandedExerciseCards=new Set();
 let historyView=localStorage.getItem('wt_history_view')||'groups';
 
+let progressRevision=0;
 function save(){
+  progressRevision++;
   const current=localStorage.getItem('wt_v4');
   try { if(current) localStorage.setItem('wt_backup_v1',current); localStorage.setItem('wt_v4',JSON.stringify(state)); }
   catch(e){showToast('Не удалось сохранить данные. Скачай резервную копию в настройках.');}
@@ -732,6 +755,7 @@ async function loadFromSheets(manual=false){
       const merged={...j.sessions},seenSlots=new Set(Object.values(j.sessions).map(slotOf));
       Object.entries(local).forEach(([key,session])=>{if(!session.synced&&!seenSlots.has(slotOf(session))){merged[key]=session;seenSlots.add(slotOf(session));}});
       state.sessions=merged;
+      if(j.muscleGroups){muscleMap={...WorkoutProgress.DEFAULT_EXERCISE_MUSCLES,...j.muscleGroups,...localMuscleOverrides};const missingDefaults=Object.keys(WorkoutProgress.DEFAULT_EXERCISE_MUSCLES).some(n=>!j.muscleGroups[n]);const changedLocally=Object.entries(localMuscleOverrides).some(([n,g])=>(j.muscleGroups[n]||'')!==g);if(missingDefaults||changedLocally||pendingGroupSync){pendingGroupSync=true;saveMuscleGroups();}}
       state.current=cur;
       save();
       setSyncUI('ok','Синхронизировано');
@@ -757,8 +781,8 @@ function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById(name+'Screen').classList.add('active');
-  document.body.classList.toggle('history-light',name==='history');
-  document.querySelector('meta[name=theme-color]').content=name==='history'?'#f1f0ed':'#0b1220';
+  document.body.classList.add('history-light');
+  document.querySelector('meta[name=theme-color]').content='#f1f0ed';
   document.getElementById('nav-'+name).classList.add('active');
   if(name==='history') renderHistory();
   if(name==='stats') renderStats();
@@ -1209,7 +1233,7 @@ function renderExStats(){
 }
 function renderCalendar(){
   const sessions=Object.values(state.sessions||{});
-  const byDate={};sessions.forEach(s=>{if(DAYS.some(day=>day.key===s.dayKey)&&/^\d{4}-\d{2}-\d{2}$/.test(String(s.date||'')))byDate[s.date]=s.dayKey;});
+  const byDate={};sessions.forEach(s=>{const date=WorkoutProgress.isoDate(s.date,2026);if(date)byDate[date]=s.dayKey||'worked';});
   const today=new Date(),start=new Date(today);start.setDate(start.getDate()-55);
   const firstDow=start.getDay();
   const cells=[];for(let i=0;i<firstDow;i++)cells.push(null);
@@ -1218,7 +1242,7 @@ function renderCalendar(){
     <div class="cal-day-labels">${['Вс','Пн','Вт','Ср','Чт','Пт','Сб'].map(d=>`<div class="cal-day-lbl">${d}</div>`).join('')}</div>
     <div class="cal-grid">${cells.map(d=>{
       if(!d)return'<div></div>';const k=byDate[d];
-      return`<div class="cal-cell${k?' '+k:''}" title="${d}${k?' — '+DAYS.find(x=>x.key===k)?.name:''}"></div>`;
+      return`<div class="cal-cell${k?' '+(DAYS.some(x=>x.key===k)?k:'worked'):''}" title="${d}${k?' — тренировка':''}"></div>`;
     }).join('')}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
       ${DAYS.map(d=>`<span style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:${d.color};border-radius:2px;display:inline-block;opacity:0.8"></span>${d.name}</span>`).join('')}
@@ -1298,5 +1322,6 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
 renderTabs();renderExercises();
 if(settings.scriptUrl){loadFromSheets();}else{hideLoader();}
 </script>
+<script src="progress-ui.js"></script>
 </body>
 </html>
