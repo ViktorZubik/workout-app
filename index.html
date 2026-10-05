@@ -423,7 +423,7 @@ body{background:#f1f0ed;color:#191917;letter-spacing:.005em}
   </div>
 </div>
 
-<script src="progress.js"></script>
+<script src="progress.js?v=progress-fix-2"></script>
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const DAYS=[
@@ -442,11 +442,16 @@ const DAYS=[
   {key:"back",name:"Спина + бицепс",label:"Спина",color:"#4A9EFF",base:[
     {name:"Подтягивания в тренажёре с противовесом",muscle:"Спина / широчайшие",weightMode:"assistance",sets:[[10,21],[7,21],[7,28]]},
     {name:"Горизонтальная тяга блока",muscle:"Спина / широчайшие",sets:[[12,30],[12,35],[10,40]]},
+    {name:"Тяга штанги в наклоне",muscle:"Спина / широчайшие",sets:[["",""]]},
     {name:"Сгибание рук с EZ-грифом",muscle:"Бицепс / общий вес, гриф 10 кг",sets:[[15,10],[10,20],[7,25],[7,25]]},
     {name:"Бицепс в кроссовере",muscle:"Бицепс",sets:[[10,15],[10,15],[10,12.5],[10,12.5]]}
   ]},
   {key:"free",name:"Свободная",label:"Своб.",color:"#A78BFA",base:[
     {name:"Скручивания на скамье с отрицательным наклоном",muscle:"Пресс",sets:[]}
+  ]},
+  {key:"cardio",name:"Кардио",label:"Кардио",color:"#6e8d87",base:[
+    {name:"Эллипс",muscle:"Кардио",weightMode:"cardio",sets:[{duration:"",distance:"",done:false}]},
+    {name:"Беговая дорожка",muscle:"Кардио",weightMode:"cardio",sets:[{duration:"",distance:"",done:false}]}
   ]}
 ];
 const POOLS={
@@ -479,6 +484,10 @@ const POOLS={
   ],
   free:[
     {name:"Скручивания на скамье с отрицательным наклоном",muscle:"Пресс"}
+  ],
+  cardio:[
+    {name:"Эллипс",muscle:"Кардио",weightMode:"cardio"},
+    {name:"Беговая дорожка",muscle:"Кардио",weightMode:"cardio"}
   ]
 };
 
@@ -503,7 +512,7 @@ function doGet(e) {
       var weightCol = findHeader(headers, ['вес (кг)', 'вес']);
       var isJournal = dateCol >= 0 && groupCol >= 0 && exerciseCol >= 0 && repsCol >= 0 && weightCol >= 0;
       if (isJournal) {
-        readJournalRows(sheet, values, shown, {date:dateCol, group:groupCol, exercise:exerciseCol, set:setCol, reps:repsCol, weight:weightCol}, sessions);
+        readJournalRows(sheet, values, shown, {date:dateCol, group:groupCol, exercise:exerciseCol, set:setCol, reps:repsCol, weight:weightCol, time:findHeader(headers,['время (мин)','время, мин','время']), distance:findHeader(headers,['дистанция (км)','дистанция, км','дистанция'])}, sessions);
       } else if (headers.indexOf('id сессии') >= 0 && headers.indexOf('день #') >= 0) {
         readAppRows(sheet, values, ss, sessions);
       }
@@ -539,6 +548,7 @@ function dayInfo(group) {
   if (g.indexOf('ноги') >= 0 && g.indexOf('плеч') >= 0) return {idx:0,key:'legs',color:'#39D353'};
   if (g.indexOf('груд') >= 0 && g.indexOf('трицепс') >= 0) return {idx:1,key:'chest',color:'#FF9F43'};
   if (g.indexOf('спин') >= 0 && g.indexOf('бицепс') >= 0) return {idx:2,key:'back',color:'#4A9EFF'};
+  if (g.indexOf('кардио') >= 0) return {idx:4,key:'cardio',color:'#6e8d87'};
   return {idx:3,key:'free',color:'#A78BFA'};
 }
 function normalizedExercise(name) {
@@ -570,25 +580,35 @@ function readJournalRows(sheet, values, shown, cols, sessions) {
     var group = String(display[cols.group] || '').trim();
     var exercise = normalizedExercise(display[cols.exercise]);
     if (!date || !group || !exercise) continue;
+    var cardio = /^(эллипс|беговая дорожка)$/i.test(exercise);
+    var duration = cardio && cols.time >= 0 ? parseNumber(row[cols.time]) : '';
+    var distance = cardio && cols.distance >= 0 ? parseNumber(row[cols.distance]) : '';
     var reps = parseNumber(row[cols.reps]);
     var weight = parseNumber(row[cols.weight]);
+    if (cardio) {
+      if (duration === '' && distance === '') continue;
+      pending.push({date:date,group:group,exercise:exercise,duration:duration,distance:distance,cardio:true,setNo:cols.set>=0?parseNumber(row[cols.set]):'',info:dayInfo(group)});
+      continue;
+    }
     if (reps === '' && cols.set >= 0) {
-      var combo = String(display[cols.set] || '').match(/(\\d+(?:[.,]\\d+)?)\\s*[×xх]\\s*(\\d+(?:[.,]\\d+)?)/i);
+      var combo = String(display[cols.set] || '').match(/(\d+(?:[.,]\d+)?)\s*[×xх]\s*(\d+(?:[.,]\d+)?)/i);
       if (combo) { reps = parseNumber(combo[1]); if (weight === '') weight = parseNumber(combo[2]); }
     }
     if (reps === '') continue;
     var setNo = cols.set >= 0 ? parseNumber(row[cols.set]) : '';
-    var info = dayInfo(group);
-    pending.push({date:date,group:group,exercise:exercise,reps:reps,weight:weight,setNo:setNo,rowOrder:i,info:info});
+    pending.push({date:date,group:group,exercise:exercise,reps:reps,weight:weight,setNo:setNo,info:dayInfo(group)});
   }
   pending.forEach(function(item) {
     var s = ensureSession(sessions, item.date, item.group, item.info);
     var ex = s.exercises.find(function(x) { return x.name === item.exercise; });
-    var mode = /противовес|гравитрон/i.test(item.exercise) ? 'assistance' : 'load';
-    if (!ex) { ex = {name:item.exercise,muscle:'',weightMode:mode,sets:[]}; s.exercises.push(ex); }
-    ex.sets.push({reps:item.reps,weight:item.weight,done:true});
-    s.totalSets++;
-    if (mode !== 'assistance' && item.weight !== '') s.totalVol += item.reps*item.weight;
+    var mode = item.cardio ? 'cardio' : (/противовес|гравитрон/i.test(item.exercise) ? 'assistance' : 'load');
+    if (!ex) { ex = {name:item.exercise,muscle:item.cardio?'Кардио':'',weightMode:mode,sets:[]}; s.exercises.push(ex); }
+    if(item.cardio) ex.sets.push({duration:item.duration,distance:item.distance,done:true});
+    else {
+      ex.sets.push({reps:item.reps,weight:item.weight,done:true});
+      s.totalSets++;
+      if (mode !== 'assistance' && item.weight !== '') s.totalVol += item.reps*item.weight;
+    }
   });
 }
 function readAppRows(sheet, rows, ss, sessions) {
@@ -598,14 +618,20 @@ function readAppRows(sheet, rows, ss, sessions) {
     var dayName=String(row[3]), dayKey=String(row[4]), dayColor=String(row[5]);
     var exName=normalizedExercise(row[6]), exMuscle=String(row[7]);
     var reps=parseNumber(row[8]), weight=parseNumber(row[9]), mode=String(row[11]||'load');
-    if (reps === '') continue;
+    var duration=parseNumber(row[12]), distance=parseNumber(row[13]);
+    if(mode==='cardio' ? (duration===''&&distance==='') : reps==='') continue;
     var key=date+'-'+dayIdx;
     if (!sessions[key]) sessions[key]={id:sessionId,date:date,dayIdx:dayIdx,dayName:dayName,dayKey:dayKey,dayColor:dayColor,totalSets:0,totalVol:0,synced:true,exercises:[]};
     var s=sessions[key], ex=s.exercises.find(function(x){return x.name===exName;});
     if (!ex) { ex={name:exName,muscle:exMuscle,weightMode:mode,sets:[]}; s.exercises.push(ex); }
-    ex.sets.push({reps:reps,weight:weight,done:true}); s.totalSets++;
-    if (mode!=='assistance' && weight!=='') s.totalVol+=reps*weight;
+    if(mode==='cardio') ex.sets.push({duration:duration,distance:distance,done:true});
+    else {ex.sets.push({reps:reps,weight:weight,done:true});s.totalSets++;if(mode!=='assistance'&&weight!=='')s.totalVol+=reps*weight;}
   }
+}
+function ensureAppCardioHeaders(sheet) {
+  var headers=sheet.getRange(1,1,1,Math.max(12,sheet.getLastColumn())).getDisplayValues()[0].map(function(x){return String(x).trim().toLowerCase();});
+  if(headers.length<13||!headers[12])sheet.getRange(1,13).setValue('Время (мин)');
+  if(headers.length<14||!headers[13])sheet.getRange(1,14).setValue('Дистанция (км)');
 }
 function toDateKey(value, spreadsheet) {
   return value instanceof Date ? Utilities.formatDate(value, spreadsheet.getSpreadsheetTimeZone(), 'yyyy-MM-dd') : String(value);
@@ -630,16 +656,17 @@ function doPost(e) {
     }
     var sheet=appSheet || ss.getSheetByName('Тренировки') || ss.insertSheet('Тренировки');
     if (sheet.getLastRow()===0) {
-      sheet.appendRow(['ID сессии','Дата','День #','День','Ключ дня','Цвет','Упражнение','Группа мышц','Повторения','Вес (кг)','Объём (кг)','Тип нагрузки']);
-      sheet.getRange(1,1,1,12).setFontWeight('bold').setBackground('#1a2535').setFontColor('#ffffff'); sheet.setFrozenRows(1);
+      sheet.appendRow(['ID сессии','Дата','День #','День','Ключ дня','Цвет','Упражнение','Группа мышц','Повторения','Вес (кг)','Объём (кг)','Тип нагрузки','Время (мин)','Дистанция (км)']);
+      sheet.getRange(1,1,1,14).setFontWeight('bold').setBackground('#1a2535').setFontColor('#ffffff'); sheet.setFrozenRows(1);
     }
     if (action==='save') {
       var session=data.session, last=sheet.getLastRow();
+      if((session.exercises||[]).some(function(ex){return ex.weightMode==='cardio';})){ensureAppCardioHeaders(sheet);}
       if (last>1) {
         var check=sheet.getRange(2,1,last-1,3).getValues();
         for (var i=check.length-1;i>=0;i--) if (String(check[i][0])===String(session.id) || (toDateKey(check[i][1],ss)===String(session.date) && Number(check[i][2])===Number(session.dayIdx))) sheet.deleteRow(i+2);
       }
-      session.exercises.forEach(function(ex){ex.sets.filter(function(s){return s.done;}).forEach(function(s){sheet.appendRow([session.id,session.date,session.dayIdx,session.dayName,session.dayKey,session.dayColor,ex.name,ex.muscle,s.reps,s.weight,ex.weightMode==='assistance'?0:s.reps*s.weight,ex.weightMode||'load']);});});
+      session.exercises.forEach(function(ex){ex.sets.filter(function(s){return s.done;}).forEach(function(s){var cardio=ex.weightMode==='cardio';sheet.appendRow([session.id,session.date,session.dayIdx,session.dayName,session.dayKey,session.dayColor,ex.name,ex.muscle,cardio?'':s.reps,cardio?'':s.weight,cardio?0:(ex.weightMode==='assistance'?0:s.reps*s.weight),ex.weightMode||'load',cardio?s.duration:'',cardio?s.distance:'']);});});
     } else if (action==='delete') {
       var rows=sheet.getDataRange().getValues(), id=String(data.id);
       for (var r=rows.length-1;r>=1;r--) if (String(rows[r][0])===id) sheet.deleteRow(r+1);
@@ -654,11 +681,15 @@ function appDateForJournal(date) {
 function saveToJournal(sheet, session, ss) {
   var group=String(session.dayName||''), iso=String(session.date||''), m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   var dateValue=m ? new Date(Number(m[1]),Number(m[2])-1,Number(m[3])) : iso;
+  var hasCardio=(session.exercises||[]).some(function(ex){return ex.weightMode==='cardio';});
   var vals=sheet.getDataRange().getValues(), shown=sheet.getDataRange().getDisplayValues();
   var headers=shown[0].map(function(x){return String(x).trim().toLowerCase();});
   var dateCol=findHeader(headers,['дата']), groupCol=findHeader(headers,['группа мышц']);
   var exCol=findHeader(headers,['упражнение']), setCol=findHeader(headers,['№ подхода','номер подхода']);
-  var noteCol=findHeader(headers,['примечание']), notes={};
+  var repsCol=findHeader(headers,['повторы']), weightCol=findHeader(headers,['вес (кг)','вес']);
+  var noteCol=findHeader(headers,['примечание']), timeCol=findHeader(headers,['время (мин)','время, мин','время']), distanceCol=findHeader(headers,['дистанция (км)','дистанция, км','дистанция']), notes={};
+  if(hasCardio&&timeCol<0){timeCol=sheet.getLastColumn();sheet.getRange(1,timeCol+1).setValue('Время (мин)');}
+  if(hasCardio&&distanceCol<0){distanceCol=sheet.getLastColumn();sheet.getRange(1,distanceCol+1).setValue('Дистанция (км)');}
   function sameDate(value, display) {
     if (value instanceof Date) return Utilities.formatDate(value,ss.getSpreadsheetTimeZone(),'yyyy-MM-dd')===iso;
     var target=m ? m[3]+'.'+m[2] : iso;
@@ -673,9 +704,13 @@ function saveToJournal(sheet, session, ss) {
   (session.exercises||[]).forEach(function(ex){
     var setNo=1;
     (ex.sets||[]).filter(function(s){return s.done;}).forEach(function(set){
-      var reps=parseNumber(set.reps), weight=parseNumber(set.weight), combo=String(reps)+'×'+(weight===''?'':String(weight));
-      var note=notes[String(ex.name)+'|'+String(setNo)] || '';
-      sheet.appendRow([dateValue,group,ex.name,setNo,combo,reps,weight,note]); setNo++;
+      var cardio=ex.weightMode==='cardio', reps=cardio?'':parseNumber(set.reps), weight=cardio?'':parseNumber(set.weight);
+      var combo=cardio?String(set.duration||'')+' мин · '+String(set.distance||'')+' км':String(reps)+'×'+(weight===''?'':String(weight));
+      var note=notes[String(ex.name)+'|'+String(setNo)]||'';
+      if(cardio){
+        var row=new Array(sheet.getLastColumn()).fill('');row[dateCol]=dateValue;row[groupCol]=group;row[exCol]=ex.name;if(setCol>=0)row[setCol]=setNo;if(repsCol>=0)row[repsCol]=combo;if(weightCol>=0)row[weightCol]='';if(noteCol>=0)row[noteCol]=note;row[timeCol]=set.duration;row[distanceCol]=set.distance;sheet.appendRow(row);
+      } else sheet.appendRow([dateValue,group,ex.name,setNo,combo,reps,weight,note]);
+      setNo++;
     });
   });
 }
@@ -688,7 +723,7 @@ function deleteFromJournal(sheet, id) {
   for (var i=vals.length-1;i>=1;i--) if (String(vals[i][dc]).trim()===date && String(vals[i][gc]).trim()===info.name) sheet.deleteRow(i+1);
 }
 function dayInfoFromIndex(i) {
-  return [{name:'Ноги + плечи'},{name:'Грудь + трицепс'},{name:'Спина + бицепс'},{name:'Свободная'}][i] || null;
+  return [{name:'Ноги + плечи'},{name:'Грудь + трицепс'},{name:'Спина + бицепс'},{name:'Свободная'},{name:'Кардио'}][i] || null;
 }`;
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
@@ -700,7 +735,7 @@ if(!localStorage.getItem('wt_exercise_cleanup_v1')){
   Object.entries(state.current||{}).forEach(([di,day])=>{
     const kept=(day.exercises||[]).filter(ex=>allowedExercises.has(aliases[ex.name]||ex.name)).map(ex=>({...ex,name:aliases[ex.name]||ex.name}));
     if(kept.length)day.exercises=kept;
-    else if(DAYS[Number(di)]?.base?.length)day.exercises=DAYS[Number(di)].base.map(ex=>({name:ex.name,muscle:ex.muscle,weightMode:ex.weightMode||'load',sets:(ex.sets||[]).map(([reps,weight])=>({reps,weight,done:false}))}));
+    else if(DAYS[Number(di)]?.base?.length)day.exercises=DAYS[Number(di)].base.map(ex=>({name:ex.name,muscle:ex.muscle,weightMode:ex.weightMode||'load',sets:(ex.sets||[]).map(set=>Array.isArray(set)?({reps:set[0],weight:set[1],done:false}):({...set,done:false}))}));
   });
   save();
   localStorage.setItem('wt_exercise_cleanup_v1','done');
@@ -710,6 +745,12 @@ Object.entries(state.current||{}).forEach(([di,day])=>{
   const untouched=(day.exercises||[]).length>0&&day.exercises.every(ex=>(ex.sets||[]).length>0&&ex.sets.every(set=>Number(set.reps)===10&&Number(set.weight)===20&&!set.done));
   if(untouched) delete state.current[di];
 });
+const savedBackDraft=state.current?.[2];
+if(savedBackDraft&&!(savedBackDraft.exercises||[]).some(ex=>ex.name==='Тяга штанги в наклоне')){
+  const cableIndex=savedBackDraft.exercises.findIndex(ex=>ex.name==='Горизонтальная тяга блока');
+  savedBackDraft.exercises.splice(cableIndex>=0?cableIndex+1:0,0,{name:'Тяга штанги в наклоне',muscle:'Спина / широчайшие',weightMode:'load',sets:[{reps:'',weight:'',done:false}]});
+  save();
+}
 let openSelectIdx=null,customTarget=null,editSessionKey=null,editSessionData=null;
 let expandedExerciseCards=new Set();
 let historyView=localStorage.getItem('wt_history_view')||'groups';
@@ -773,7 +814,7 @@ async function loadFromSheets(manual=false){
   // refresh visible screen
   const active=document.querySelector('.screen.active');
   if(active&&active.id==='historyScreen') renderHistory();
-  if(active&&active.id==='statsScreen') renderStats();
+  if(active&&active.id==='statsScreen') renderProgressDashboard();
 }
 
 // ── SCREENS ───────────────────────────────────────────────────────────────────
@@ -785,7 +826,7 @@ function showScreen(name){
   document.querySelector('meta[name=theme-color]').content='#f1f0ed';
   document.getElementById('nav-'+name).classList.add('active');
   if(name==='history') renderHistory();
-  if(name==='stats') renderStats();
+  if(name==='stats'){try{if(typeof renderProgressDashboard==='function')renderProgressDashboard();else document.getElementById('progressRoot').innerHTML='<div class="p-card p-empty">Не загрузился модуль раздела. Обновите страницу.</div>';}catch(error){console.error('Progress screen failed:',error);document.getElementById('progressRoot').innerHTML='<div class="p-card p-empty">Не удалось построить аналитику: '+escapeHtml(error.message)+'</div>';}}
   if(name==='settings') renderSettingsScreen();
 }
 
@@ -794,7 +835,7 @@ function initDay(di){
   if(!state.current[di]){
     state.current[di]={date:todayStr(),exercises:DAYS[di].base.map(ex=>({
       name:ex.name,muscle:ex.muscle,weightMode:ex.weightMode||'load',
-      sets:(ex.sets||[]).map(([reps,weight])=>({reps,weight,done:false}))
+      sets:(ex.sets||[]).map(set=>Array.isArray(set)?({reps:set[0],weight:set[1],done:false}):({...set,done:false}))
     }))};
     save();
   }
@@ -841,11 +882,11 @@ function renderExercises(){
       </div>
       <div class="exercise-details${expanded?' open':''}">
       <div class="sets-grid">
-        <div class="col-hdr">#</div><div class="col-hdr">Повт</div><div class="col-hdr">${ex.weightMode==='assistance'?'Противовес':'Вес, кг'}</div><div class="col-hdr">✓</div>
+        <div class="col-hdr">#</div><div class="col-hdr">${ex.weightMode==='cardio'?'Минуты':'Повт'}</div><div class="col-hdr">${ex.weightMode==='cardio'?'Км':ex.weightMode==='assistance'?'Противовес':'Вес, кг'}</div><div class="col-hdr">✓</div>
         ${ex.sets.map((s,si)=>`
           <div class="set-num">${si+1}</div>
-          <input class="set-input${s.done?' done':''}" type="number" inputmode="decimal" value="${escapeHtml(s.reps)}" min="1" max="99" onchange="upd(${di},${ei},${si},'reps',this.value)">
-          <input class="set-input${s.done?' done':''}" type="number" inputmode="decimal" value="${escapeHtml(s.weight)}" min="0" max="999" step="2.5" onchange="upd(${di},${ei},${si},'weight',this.value)">
+          <input class="set-input${s.done?' done':''}" type="number" inputmode="decimal" value="${escapeHtml(ex.weightMode==='cardio'?s.duration??'':s.reps)}" min="0" max="999" step="${ex.weightMode==='cardio'?'1':'1'}" placeholder="${ex.weightMode==='cardio'?'мин':'повт'}" onchange="upd(${di},${ei},${si},'${ex.weightMode==='cardio'?'duration':'reps'}',this.value)">
+          <input class="set-input${s.done?' done':''}" type="number" inputmode="decimal" value="${escapeHtml(ex.weightMode==='cardio'?s.distance??'':s.weight)}" min="0" max="999" step="${ex.weightMode==='cardio'?'0.1':'2.5'}" placeholder="${ex.weightMode==='cardio'?'км':'кг'}" onchange="upd(${di},${ei},${si},'${ex.weightMode==='cardio'?'distance':'weight'}',this.value)">
           <button class="chk-btn${s.done?' on':''}" onclick="toggleSet(${di},${ei},${si})">${s.done?'✅':'⬜'}</button>
         `).join('')}
       </div>
@@ -857,9 +898,9 @@ function renderExercises(){
 function switchDay(i){state.activeDay=i;openSelectIdx=null;expandedExerciseCards.clear();save();renderTabs();renderExercises();}
 function toggleExercise(di,ei){const key=di+':'+ei;if(expandedExerciseCards.has(key))expandedExerciseCards.delete(key);else expandedExerciseCards.add(key);renderExercises();}
 function onDateChange(){const di=state.activeDay;initDay(di);state.current[di].date=document.getElementById('workoutDate').value;save();}
-function upd(di,ei,si,f,v){state.current[di].exercises[ei].sets[si][f]=parseFloat(v)||0;save();}
-function toggleSet(di,ei,si){state.current[di].exercises[ei].sets[si].done^=1;save();renderExercises();}
-function addSet(di,ei){const s=state.current[di].exercises[ei].sets,l=s[s.length-1]||{reps:10,weight:0};s.push({reps:l.reps,weight:l.weight,done:false});expandedExerciseCards.add(di+':'+ei);save();renderExercises();}
+function upd(di,ei,si,f,v){state.current[di].exercises[ei].sets[si][f]=v===''?'':(parseFloat(v)||0);save();}
+function toggleSet(di,ei,si){const ex=state.current[di].exercises[ei],set=ex.sets[si];if(ex.weightMode==='cardio'&&(set.duration===''||set.duration===undefined||set.distance===''||set.distance===undefined)){showToast('Укажи время и дистанцию');return;}set.done=!set.done;save();renderExercises();}
+function addSet(di,ei){const ex=state.current[di].exercises[ei],s=ex.sets,l=s[s.length-1]||{};s.push(ex.weightMode==='cardio'?{duration:'',distance:'',done:false}:{reps:l.reps??10,weight:l.weight??0,done:false});expandedExerciseCards.add(di+':'+ei);save();renderExercises();}
 function toggleSel(di,ei){openSelectIdx=openSelectIdx===ei?null:ei;renderExercises();}
 function cancelSel(){openSelectIdx=null;renderExercises();}
 function confirmSel(di,ei){
@@ -882,8 +923,9 @@ function saveCustomModal(){
 async function finishWorkout(){
   const di=state.activeDay,dayData=state.current[di];
   let totalSets=0,totalVol=0;
-  dayData.exercises.forEach(ex=>ex.sets.forEach(s=>{if(s.done){totalSets++;if(ex.weightMode!=='assistance')totalVol+=s.reps*s.weight;}}));
-  if(totalSets===0){showToast('Отметь хотя бы один подход ✓');return;}
+  const hasCompleted=dayData.exercises.some(ex=>ex.sets.some(s=>s.done));
+  dayData.exercises.forEach(ex=>{if(ex.weightMode==='cardio')return;ex.sets.forEach(s=>{if(s.done){totalSets++;if(ex.weightMode!=='assistance')totalVol+=s.reps*s.weight;}});});
+  if(!hasCompleted){showToast('Заполни и отметь хотя бы одно упражнение ✓');return;}
   const key=(dayData.date||todayStr())+'-'+di;
   const session={id:genId(),date:dayData.date||todayStr(),dayIdx:di,
     dayName:DAYS[di].name,dayKey:DAYS[di].key,dayColor:DAYS[di].color,
@@ -974,13 +1016,13 @@ function renderHistoryGrouped(sessions){
     const color=safeColor(rows[0][1].dayColor||day?.color);
     const headers=exerciseNames.map(name=>{
       const ex=rows.flatMap(([,session])=>session.exercises).find(item=>item.name===name);
-      return `<th>${escapeHtml(name)}<br><span style="font-weight:450;color:var(--text3)">${ex?.weightMode==='assistance'?'повторы × противовес':'повторы × кг'}</span></th>`;
+      return `<th>${escapeHtml(name)}<br><span style="font-weight:450;color:var(--text3)">${ex?.weightMode==='cardio'?'минуты · километры':ex?.weightMode==='assistance'?'повторы × противовес':'повторы × кг'}</span></th>`;
     }).join('');
     const body=rows.map(([key,session])=>{
       const cells=exerciseNames.map(name=>{
         const ex=session.exercises.find(item=>item.name===name);
         if(!ex)return '<td><span class="history-no-result">—</span></td>';
-        const results=ex.sets.filter(set=>set.done).map(set=>`<span class="history-result-set">${escapeHtml(set.reps)}×${escapeHtml(set.weight===''?'—':set.weight)}</span>`).join('');
+        const results=ex.sets.filter(set=>set.done).map(set=>`<span class="history-result-set">${ex.weightMode==='cardio'?escapeHtml((set.duration||'—')+' мин · '+(set.distance||'—')+' км'):escapeHtml(set.reps+'×'+(set.weight===''?'—':set.weight))}</span>`).join('');
         return `<td><div class="history-results">${results||'<span class="history-no-result">—</span>'}</div></td>`;
       }).join('');
       const syncAction=!session.synced&&settings.scriptUrl?'<button class="history-row-action" data-action="sync" aria-label="Синхронизировать" title="Синхронизировать">☁</button>':'';
@@ -1001,10 +1043,10 @@ function renderHistoryCards(sessions){
         <span class="sync-tag ${s.synced?'synced':'not-synced'}">${s.synced?'☁️ Sheets':'📱 Локально'}</span>
       </div>
       <div class="hist-stats">
-        <div><div class="hist-stat-val">${s.totalSets}</div><div class="hist-stat-lbl">подходов</div></div>
-        <div><div class="hist-stat-val">${(s.totalVol/1000).toFixed(1)}т</div><div class="hist-stat-lbl">объём</div></div>
+        <div><div class="hist-stat-val">${s.dayKey==='cardio'?s.exercises.reduce((n,ex)=>n+ex.sets.filter(x=>x.done).length,0):s.totalSets}</div><div class="hist-stat-lbl">${s.dayKey==='cardio'?'кардио-сегментов':'подходов'}</div></div>
+        <div><div class="hist-stat-val">${s.dayKey==='cardio'?s.exercises.reduce((n,ex)=>n+ex.sets.filter(x=>x.done).reduce((a,x)=>a+(Number(x.duration)||0),0),0):((s.totalVol||0)/1000).toFixed(1)+(s.dayKey==='cardio'?' мин':'т')}</div><div class="hist-stat-lbl">${s.dayKey==='cardio'?'минуты':'объём'}</div></div>
       </div>
-      ${s.exercises.map(ex=>`<div class="hist-ex-row"><span class="hist-ex-name">${escapeHtml(ex.name)}</span><span class="hist-ex-sets">${ex.sets.filter(x=>x.done).map(x=>escapeHtml(x.reps+'×'+(x.weight===''?'—':x.weight)+(ex.weightMode==='assistance'?'кг противовеса':'кг'))).join(', ')||'—'}</span></div>`).join('')}
+      ${s.exercises.map(ex=>`<div class="hist-ex-row"><span class="hist-ex-name">${escapeHtml(ex.name)}</span><span class="hist-ex-sets">${ex.sets.filter(x=>x.done).map(x=>ex.weightMode==='cardio'?escapeHtml((x.duration||'—')+' мин · '+(x.distance||'—')+' км'):escapeHtml(x.reps+'×'+(x.weight===''?'—':x.weight)+(ex.weightMode==='assistance'?'кг противовеса':'кг'))).join(', ')||'—'}</span></div>`).join('')}
       <div class="hist-actions">
         <button class="hist-action-btn" data-action="edit">✏️ Изменить</button>
         ${!s.synced&&settings.scriptUrl?'<button class="hist-action-btn" data-action="sync">☁️ Синхр.</button>':''}
@@ -1058,16 +1100,16 @@ function renderEditModal(){
       <div class="edit-ex-section">
         <div class="edit-ex-title">${escapeHtml(ex.name)} <span style="color:var(--text3);font-weight:400">${escapeHtml(ex.muscle)}</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px">
-          <div style="font-size:10px;color:var(--text3);text-align:center;text-transform:uppercase">Повт</div>
-          <div style="font-size:10px;color:var(--text3);text-align:center;text-transform:uppercase">${ex.weightMode==='assistance'?'Противовес':'Вес кг'}</div>
+          <div style="font-size:10px;color:var(--text3);text-align:center;text-transform:uppercase">${ex.weightMode==='cardio'?'Минуты':'Повт'}</div>
+          <div style="font-size:10px;color:var(--text3);text-align:center;text-transform:uppercase">${ex.weightMode==='cardio'?'Км':ex.weightMode==='assistance'?'Противовес':'Вес кг'}</div>
           <div></div>
         </div>
         ${ex.sets.map((set,si)=>`
           <div class="edit-set-row">
-            <input class="edit-set-input" type="number" inputmode="decimal" value="${escapeHtml(set.reps)}" placeholder="Повт"
-              onchange="editSessionData.exercises[${ei}].sets[${si}].reps=parseFloat(this.value)||0">
-            <input class="edit-set-input" type="number" inputmode="decimal" value="${escapeHtml(set.weight)}" placeholder="Вес"
-              onchange="editSessionData.exercises[${ei}].sets[${si}].weight=parseFloat(this.value)||0">
+            <input class="edit-set-input" type="number" inputmode="decimal" value="${escapeHtml(ex.weightMode==='cardio'?set.duration??'':set.reps)}" placeholder="${ex.weightMode==='cardio'?'мин':'Повт'}"
+              onchange="editSessionData.exercises[${ei}].sets[${si}].${ex.weightMode==='cardio'?'duration':'reps'}=this.value===''?'':(parseFloat(this.value)||0)">
+            <input class="edit-set-input" type="number" inputmode="decimal" value="${escapeHtml(ex.weightMode==='cardio'?set.distance??'':set.weight)}" placeholder="${ex.weightMode==='cardio'?'км':'Вес'}"
+              onchange="editSessionData.exercises[${ei}].sets[${si}].${ex.weightMode==='cardio'?'distance':'weight'}=this.value===''?'':(parseFloat(this.value)||0)">
             <button class="del-set-btn" onclick="delEditSet(${ei},${si})">✕</button>
           </div>`).join('')}
         <button class="add-set-btn" onclick="addEditSet(${ei})">+ подход</button>
@@ -1079,13 +1121,13 @@ function delEditSet(ei,si){
   renderEditModal();
 }
 function addEditSet(ei){
-  const sets=editSessionData.exercises[ei].sets,last=sets.length?sets[sets.length-1]:{reps:10,weight:20};
-  sets.push({reps:last.reps,weight:last.weight,done:true});renderEditModal();
+  const ex=editSessionData.exercises[ei],sets=ex.sets,last=sets[sets.length-1]||{};
+  sets.push(ex.weightMode==='cardio'?{duration:'',distance:'',done:true}:{reps:last.reps??10,weight:last.weight??20,done:true});renderEditModal();
 }
 async function saveEditSession(){
   if(!editSessionKey||!editSessionData)return;
   let totalSets=0,totalVol=0;
-  editSessionData.exercises.forEach(ex=>ex.sets.forEach(s=>{totalSets++;if(ex.weightMode!=='assistance')totalVol+=s.reps*s.weight;s.done=true;}));
+  editSessionData.exercises.forEach(ex=>ex.sets.forEach(s=>{if(ex.weightMode==='cardio'){s.done=s.duration!==''&&s.duration!==undefined&&s.distance!==''&&s.distance!==undefined;return;}totalSets++;if(ex.weightMode!=='assistance')totalVol+=s.reps*s.weight;s.done=true;}));
   editSessionData.totalSets=totalSets;editSessionData.totalVol=totalVol;
   const prevSynced=state.sessions[editSessionKey]?.synced;
   const prevId=state.sessions[editSessionKey]?.id;
@@ -1100,7 +1142,7 @@ async function saveEditSession(){
 }
 
 // ── STATS ─────────────────────────────────────────────────────────────────────
-function renderStats(){
+function renderLegacyStats(){
   renderAnalyticsCards();renderMonthlyChart();populateExPicker();renderCalendar();
 }
 function renderAnalyticsCards(){
@@ -1278,7 +1320,7 @@ async function importJSON(event){
   const file=event.target.files?.[0]; if(!file)return;
   try{
     const backup=JSON.parse(await file.text());
-    if(!backup||typeof backup.sessions!=='object'||!backup.sessions||!Object.values(backup.sessions).every(session=>session&&/^(?:\d{4}-\d{2}-\d{2}|\d{2}\.\d{2})$/.test(String(session.date||''))&&Array.isArray(session.exercises)&&session.exercises.every(ex=>ex&&typeof ex.name==='string'&&typeof ex.muscle==='string'&&Array.isArray(ex.sets)&&ex.sets.every(set=>set&&Number.isFinite(Number(set.reps))&&(set.weight===''||Number.isFinite(Number(set.weight)))))))throw new Error('invalid');
+    if(!backup||typeof backup.sessions!=='object'||!backup.sessions||!Object.values(backup.sessions).every(session=>session&&/^(?:\d{4}-\d{2}-\d{2}|\d{2}\.\d{2})$/.test(String(session.date||''))&&Array.isArray(session.exercises)&&session.exercises.every(ex=>ex&&typeof ex.name==='string'&&typeof ex.muscle==='string'&&Array.isArray(ex.sets)&&ex.sets.every(set=>set&&(ex.weightMode==='cardio'?Number.isFinite(Number(set.duration))&&(set.distance===''||set.distance===undefined||Number.isFinite(Number(set.distance))):Number.isFinite(Number(set.reps))&&(set.weight===''||Number.isFinite(Number(set.weight))))) )))throw new Error('invalid');
     if(!confirm('Добавить тренировки из файла к локальной истории? Записи с теми же ключами обновятся.'))return;
     const importedIds=new Set(Object.values(backup.sessions).map(s=>s.id).filter(Boolean));
     const existing=Object.fromEntries(Object.entries(state.sessions||{}).filter(([,s])=>!importedIds.has(s.id)));
@@ -1322,6 +1364,6 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
 renderTabs();renderExercises();
 if(settings.scriptUrl){loadFromSheets();}else{hideLoader();}
 </script>
-<script src="progress-ui.js"></script>
+<script src="progress-ui.js?v=progress-fix-2" onerror="document.getElementById('progressRoot').textContent='Не удалось загрузить модуль аналитики. Обновите страницу.'"></script>
 </body>
 </html>
