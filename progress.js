@@ -298,7 +298,7 @@
     return rows.sort((a,b)=>b.daysSince-a.daysSince);
   }
   function muscleImbalances(groups) {
-    const loaded=groups.filter(g=>g.group!=='Без группы'),total=loaded.reduce((s,g)=>s+g.tonnage,0);
+    const loaded=groups,total=loaded.reduce((s,g)=>s+g.tonnage,0);
     if(!total)return [];
     return loaded.filter(g=>g.tonnage/total>0.4||g.tonnage/total<0.1).map(g=>({group:g.group,share:g.tonnage/total,type:g.tonnage/total>0.4?'high':'low'}));
   }
