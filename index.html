@@ -107,6 +107,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-
 .activity-week-cells{display:grid;grid-template-rows:repeat(7,9px);gap:3px}
 .activity-cell{width:9px;height:9px;border-radius:3px;background:#1b2940;border:1px solid rgba(194,213,241,.045)}
 .activity-cell.worked{background:#5ee38a;border-color:rgba(94,227,138,.3);box-shadow:0 0 7px rgba(94,227,138,.16)}
+.activity-cell.latest{background:#e46f5b!important;border-color:#e46f5b!important;box-shadow:none!important}
 .activity-legend{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:10px;color:var(--text3)}
 .history-view-switch{display:flex;gap:6px;padding:4px;margin:0 0 14px;background:rgba(17,28,45,.85);border:1px solid var(--border);border-radius:13px}
 .history-view-btn{flex:1;padding:10px;border:0;border-radius:10px;background:transparent;color:var(--text3);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s}
@@ -218,6 +219,59 @@ button{font-family:inherit}button:focus-visible{outline:2px solid var(--blue);ou
 .rest-btn.running{background:rgba(94,227,138,.12);border-color:rgba(94,227,138,.3);color:var(--green)}
 @media(min-width:760px){.app{max-width:760px;padding-left:28px;padding-right:28px}.screen.active .app{padding-top:28px}.ex-card{padding:20px}.page-title{font-size:28px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Warm, minimal light theme for the History screen, inspired by the supplied references */
+body.history-light{background:#f1f0ed;color:#171715}
+body.history-light #historyScreen{min-height:100vh;background:#f1f0ed;color:#171715}
+body.history-light #historyScreen .app{color:#171715;padding-top:22px;padding-bottom:calc(112px + env(safe-area-inset-bottom))}
+body.history-light #historyScreen .page-title{color:#171715}
+body.history-light #historyScreen .page-header{margin-bottom:20px}
+body.history-light #historyScreen .page-header>button{background:#fff!important;color:#292825!important;border:1px solid #e8e6e2!important;border-radius:999px!important;box-shadow:0 2px 8px rgba(24,22,18,.04)}
+body.history-light .history-activity,body.history-light .history-group-card,body.history-light .hist-card{background:#fff;border:1px solid #e9e7e3;border-radius:22px;box-shadow:0 5px 20px rgba(25,23,18,.035)}
+body.history-light .history-activity{padding:18px 17px}
+body.history-light .history-activity-title{color:#171715;font-size:15px}
+body.history-light .history-activity-range{color:#96938d}
+body.history-light .activity-cell{background:#e9e8e5;border-color:transparent;border-radius:3px}
+body.history-light .activity-cell.worked{background:#171715;border-color:#171715;box-shadow:none}
+body.history-light .activity-legend{color:#8b8882}
+body.history-light .activity-legend .activity-cell.worked{background:#171715;border-color:#171715}
+body.history-light .activity-legend .activity-cell.latest{background:#e46f5b;border-color:#e46f5b}
+body.history-light .history-view-switch{background:#e8e7e4;border:0;border-radius:999px;padding:4px}
+body.history-light .history-view-btn{color:#77746e;border-radius:999px}
+body.history-light .history-view-btn.active{background:#171715;color:#fff;box-shadow:0 2px 7px rgba(0,0,0,.12)}
+body.history-light .history-group-card{padding:17px 14px}
+body.history-light .history-group-title{color:#171715!important;font-size:15px;letter-spacing:-.02em}
+body.history-light .history-group-count{color:#a09d97}
+body.history-light .history-table-scroll{border-radius:13px}
+body.history-light .history-group-table th,body.history-light .history-group-table td{border-bottom-color:#eeece8;color:#242320}
+body.history-light .history-group-table th{background:#f8f7f5;color:#85817a}
+body.history-light .history-group-table th:first-child,body.history-light .history-group-table td:first-child{background:#fff}
+body.history-light .history-group-table tbody tr:hover td{background:#fbfaf8}
+body.history-light .history-group-table tbody tr:hover td:first-child{background:#fbfaf8}
+body.history-light .history-table-date{color:#171715}
+body.history-light .history-result-set{background:#f1f0ee;color:#22211f;border-radius:999px}
+body.history-light .history-no-result{color:#c0bdb7}
+body.history-light .history-row-action{background:#f7f6f3;color:#55524d;border-color:#e8e6e2}
+body.history-light .history-row-action.danger{color:#cf5949}
+body.history-light .hist-day-name{color:#171715!important}
+body.history-light .hist-date,body.history-light .hist-ex-sets,body.history-light .hist-stat-lbl{color:#8e8a83}
+body.history-light .hist-ex-name{color:#292825}
+body.history-light .hist-stats{border-bottom-color:#eeece8}
+body.history-light .hist-action-btn{background:#f7f6f3;color:#4a4843;border-color:#e8e6e2}
+body.history-light .hist-action-btn.danger{color:#cf5949;border-color:#f0d6d1}
+body.history-light .empty-state{color:#85817a}
+body.history-light .bottom-nav{background:rgba(250,249,247,.96);border-top-color:#e4e2de}
+body.history-light .bottom-nav .nav-item{color:#9b9891}
+body.history-light .bottom-nav .nav-item.active{color:#e46f5b}
+body.history-light .bottom-nav .nav-icon{filter:grayscale(1)}
+body.history-light .bottom-nav .nav-item.active .nav-icon{filter:grayscale(1)}
+body.history-light .modal{background:#fff;color:#171715;border-top-color:#e7e5e0}
+body.history-light .modal h2,body.history-light .edit-ex-title{color:#171715}
+body.history-light .modal-input,body.history-light .edit-set-input{background:#f6f5f2;color:#171715;border-color:#e5e3df}
+body.history-light .modal-btns button{background:#f4f3f0;color:#383631;border-color:#e5e3df}
+body.history-light .modal-btns .primary{background:#171715;color:#fff;border-color:#171715}
+@media(max-width:480px){body.history-light #historyScreen .app{padding-left:16px;padding-right:16px}body.history-light .history-activity{padding:16px 13px}body.history-light .history-group-card{padding:15px 10px}}
+
 </style>
 </head>
 <body>
@@ -703,6 +757,8 @@ function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById(name+'Screen').classList.add('active');
+  document.body.classList.toggle('history-light',name==='history');
+  document.querySelector('meta[name=theme-color]').content=name==='history'?'#f1f0ed':'#0b1220';
   document.getElementById('nav-'+name).classList.add('active');
   if(name==='history') renderHistory();
   if(name==='stats') renderStats();
@@ -845,11 +901,12 @@ function historyCalendarISO(session){
   return short?localDateISO().slice(0,4)+'-'+short[2]+'-'+short[1]:'';
 }
 function renderHistoryCalendar(sessions){
-  const dates=new Map();
+  const dates=new Map();let latestDate='';
   sessions.forEach(([,session])=>{
     const date=historyCalendarISO(session);if(!date)return;
     if(!dates.has(date))dates.set(date,[]);
     dates.get(date).push(session.dayName||'Тренировка');
+    if(!latestDate||historyOrderDate(session)>historyOrderDate({date:latestDate}))latestDate=date;
   });
   const today=new Date();today.setHours(0,0,0,0);
   const start=new Date(today);start.setDate(start.getDate()-((start.getDay()+6)%7)-25*7);
@@ -863,17 +920,18 @@ function renderHistoryCalendar(sessions){
       const date=new Date(weekStart);date.setDate(weekStart.getDate()+day);
       const key=localDateISO(date),workouts=dates.get(key)||[];
       const future=date>today;
-      cells.push(future?'<span class="activity-cell" aria-hidden="true"></span>':`<span class="activity-cell${workouts.length?' worked':''}" title="${key}${workouts.length?' · '+escapeHtml([...new Set(workouts)].join(', ')):' · нет тренировки'}" aria-label="${key}${workouts.length?' — была тренировка':' — тренировки не было'}"></span>`);
+      const cellClass='activity-cell'+(workouts.length?' worked'+(key===latestDate?' latest':''):'');
+      cells.push(future?'<span class="activity-cell" aria-hidden="true"></span>':`<span class="${cellClass}" title="${key}${workouts.length?' · '+escapeHtml([...new Set(workouts)].join(', ')):' · нет тренировки'}" aria-label="${key}${workouts.length?' — была тренировка':' — тренировки не было'}"></span>`);
     }
     weeks.push(`<div class="activity-week-col"><div class="activity-month-label">${monthLabel}</div><div class="activity-week-cells">${cells.join('')}</div></div>`);
   }
   return `<section class="history-activity">
-    <div class="history-activity-top"><div class="history-activity-title">Активность</div><div class="history-activity-range">последние 26 недель</div></div>
+    <div class="history-activity-top"><div class="history-activity-title">Активность</div><div class="history-activity-range">${dates.size} ${dates.size%10===1&&dates.size%100!==11?'день':dates.size%10>=2&&dates.size%10<=4&&(dates.size%100<12||dates.size%100>14)?'дня':'дней'} с тренировкой</div></div>
     <div class="activity-scroll"><div class="activity-layout">
       <div class="activity-weekday-labels"><span></span><span>Пн</span><span></span><span>Ср</span><span></span><span>Пт</span><span></span><span>Вс</span></div>
       <div class="activity-weeks">${weeks.join('')}</div>
     </div></div>
-    <div class="activity-legend"><span class="activity-cell"></span><span>нет тренировки</span><span class="activity-cell worked" style="margin-left:8px"></span><span>была тренировка</span></div>
+    <div class="activity-legend"><span class="activity-cell"></span><span>нет тренировки</span><span class="activity-cell worked" style="margin-left:8px"></span><span>тренировка</span><span class="activity-cell latest" style="margin-left:8px"></span><span>последняя</span></div>
   </section>`;
 }
 function renderHistoryGrouped(sessions){
