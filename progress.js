@@ -41,6 +41,8 @@
   const EXCLUDED_EXERCISE = /подтягиван|гравитрон/i;
 
   function isExcludedExercise(name) { return EXCLUDED_EXERCISE.test(String(name || '')); }
+  // Treat missing text fields as empty so one malformed imported row cannot break analytics sorting.
+  function compareText(a,b,locale) { return String(a??'').localeCompare(String(b??''),locale); }
   function numberOrNull(value) {
     if (value === '' || value === null || value === undefined) return null;
     const n = Number(String(value).replace(',', '.'));
@@ -77,18 +79,21 @@
     const entries=[];
     const list=Array.isArray(sessions)?sessions:Object.entries(sessions||{}).map(([key,value])=>({...value,_key:key}));
     list.forEach(session=>{
+      if(!session||typeof session!=='object')return;
       const date=isoDate(session.date,year);if(!date)return;
-      (session.exercises||[]).forEach(exercise=>{
-        if(exclude&&isExcludedExercise(exercise.name))return;
-        (exercise.sets||[]).forEach((set,index)=>{
-          if(set.done===false)return;
+      (Array.isArray(session.exercises)?session.exercises:[]).forEach(exercise=>{
+        if(!exercise||typeof exercise!=='object')return;
+        const exerciseName=String(exercise.name||'').trim();
+        if(!exerciseName||(exclude&&isExcludedExercise(exerciseName)))return;
+        (Array.isArray(exercise.sets)?exercise.sets:[]).forEach((set,index)=>{
+          if(!set||typeof set!=='object'||set.done===false)return;
           const reps=numberOrNull(set.reps),weight=numberOrNull(set.weight);
           if(reps===null||reps<0)return;
-          entries.push({date,exercise:String(exercise.name||''),weight,reps,setNo:index+1,dayName:session.dayName||'',weightMode:exercise.weightMode||'load'});
+          entries.push({date,exercise:exerciseName,weight,reps,setNo:index+1,dayName:session.dayName||'',weightMode:exercise.weightMode||'load'});
         });
       });
     });
-    return entries.sort((a,b)=>a.date.localeCompare(b.date)||a.exercise.localeCompare(b.exercise,'ru')||a.setNo-b.setNo);
+    return entries.sort((a,b)=>compareText(a.date,b.date)||compareText(a.exercise,b.exercise,'ru')||a.setNo-b.setNo);
   }
   function estimatedOneRepMax(weight,reps) {
     const w=numberOrNull(weight),r=numberOrNull(reps);
@@ -105,7 +110,7 @@
       if(!map.has(entry.exercise))map.set(entry.exercise,[]);
       map.get(entry.exercise).push(entry);
     });
-    return [...workouts].sort((a,b)=>a[0].localeCompare(b[0])).map(([date,exercises])=>({
+    return [...workouts].sort((a,b)=>compareText(a[0],b[0])).map(([date,exercises])=>({
       date,
       exercises:[...exercises].map(([exercise,sets])=>{
         const loaded=sets.filter(isLoaded);
@@ -185,7 +190,7 @@
   function getExerciseOptions(entries) {
     const map=new Map();
     entries.forEach(e=>{if(!map.has(e.exercise))map.set(e.exercise,{name:e.exercise,dates:new Set(),sets:0,last:e.date});const x=map.get(e.exercise);x.dates.add(e.date);x.sets++;if(e.date>x.last)x.last=e.date;});
-    return [...map.values()].map(x=>({name:x.name,workouts:x.dates.size,sets:x.sets,last:x.last})).sort((a,b)=>b.workouts-a.workouts||b.sets-a.sets||b.last.localeCompare(a.last)||a.name.localeCompare(b.name,'ru'));
+    return [...map.values()].map(x=>({name:x.name,workouts:x.dates.size,sets:x.sets,last:x.last})).sort((a,b)=>b.workouts-a.workouts||b.sets-a.sets||compareText(b.last,a.last)||compareText(a.name,b.name,'ru'));
   }
   function exerciseWorkouts(entries,exercise,start,end) {
     const selected=entries.filter(e=>(!start||e.date>=start)&&(!end||e.date<=end));
@@ -199,7 +204,7 @@
     return null;
   }
   function exercisePersonalStats(workouts) {
-    const by=workouts.slice().sort((a,b)=>a.date.localeCompare(b.date));
+    const by=workouts.slice().sort((a,b)=>compareText(a.date,b.date));
     let bestWeight=null,best1RM=null,bestReps=null;
     by.forEach(w=>{if(w.maxWeight!==null)bestWeight=Math.max(bestWeight??-Infinity,w.maxWeight);if(w.oneRM!==null)best1RM=Math.max(best1RM??-Infinity,w.oneRM);if(w.maxReps!==null)bestReps=Math.max(bestReps??-Infinity,w.maxReps);});
     return {bestWeight,best1RM,bestReps,first:by[0]||null};
@@ -209,7 +214,7 @@
     workouts.forEach(w=>w.exercises.forEach(ex=>{if(!byExercise.has(ex.exercise))byExercise.set(ex.exercise,[]);byExercise.get(ex.exercise).push({...ex,date:w.date});}));
     const records=[];
     byExercise.forEach((list,exercise)=>{
-      list.sort((a,b)=>a.date.localeCompare(b.date));
+      list.sort((a,b)=>compareText(a.date,b.date));
       if(list.length<2)return;
       let maxWeight=null,max1RM=null,maxTonnage=null;
       const bestRepsAtWeight=new Map();
@@ -230,7 +235,7 @@
       });
     });
     const order={maxWeight:0,repsAtWeight:1,oneRM:2,tonnage:3};
-    return records.sort((a,b)=>b.date.localeCompare(a.date)||order[a.type]-order[b.type]||a.exercise.localeCompare(b.exercise,'ru'));
+    return records.sort((a,b)=>compareText(b.date,a.date)||order[a.type]-order[b.type]||compareText(a.exercise,b.exercise,'ru'));
   }
   function muscleDistribution(entries,exerciseMuscles,start,end) {
     const selected=filterRange(entries,start,end),groups=new Map(MUSCLE_GROUPS.map(g=>[g,{group:g,sets:0,tonnage:0}]));
@@ -241,7 +246,7 @@
       if(!group||!MUSCLE_GROUPS.includes(group)){const x=groups.get('Без группы');x.sets++;x.tonnage+=tonnage([e]);unassigned.add(e.exercise);}
       else {const x=groups.get(group);x.sets++;x.tonnage+=tonnage([e]);}
     });
-    return {groups:[...groups.values()],unassigned:[...unassigned].sort((a,b)=>a.localeCompare(b,'ru'))};
+    return {groups:[...groups.values()],unassigned:[...unassigned].sort((a,b)=>compareText(a,b,'ru'))};
   }
   function groupWeeklyAverages(distribution,weeks) {
     const n=Math.max(1,weeks);
