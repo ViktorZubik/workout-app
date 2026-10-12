@@ -371,6 +371,12 @@ body{background:#f1f0ed;color:#191917;letter-spacing:.005em}
     <div id="syncStatus" style="margin-top:10px;font-size:13px"></div>
   </div>
   <div class="settings-card">
+    <div class="settings-title">Экспорт для ChatGPT</div>
+    <div class="settings-hint" style="font-size:12px;line-height:1.6">Скачает сохранённую историю, загруженную из Google Sheets. Черновики и настройки в файл не входят. Для полной выгрузки сначала дождись успешной загрузки данных; несинхронизированные тренировки нужно синхронизировать из раздела «История».</div>
+    <button class="settings-btn btn-blue" id="chatgptExportBtn" onclick="exportForChatGPT()">📄 Экспорт для ChatGPT</button>
+    <div id="chatgptExportStatus" role="status" aria-live="polite" style="margin-top:10px;font-size:12px;line-height:1.5"></div>
+  </div>
+  <div class="settings-card">
     <div class="settings-title">Как обновить Apps Script</div>
     <div class="settings-hint" style="font-size:12px;line-height:1.8">
       <b style="color:var(--text)">1.</b> Открой Apps Script своей таблицы<br>
@@ -433,6 +439,7 @@ body{background:#f1f0ed;color:#191917;letter-spacing:.005em}
 </div>
 
 <script src="progress.js?v=progress-fix-5"></script>
+<script src="export-core.js?v=chatgpt-export-1"></script>
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const DAYS=[
@@ -737,6 +744,8 @@ function dayInfoFromIndex(i) {
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let progressRevision=0;
+let sheetsHistoryLoadedAt=0;
+let sheetsHistorySignature='';
 let state=JSON.parse(localStorage.getItem('wt_v4')||'null')||{activeDay:0,sessions:{},current:{}};
 let settings=JSON.parse(localStorage.getItem('wt_settings')||'null')||{scriptUrl:''};
 if(!localStorage.getItem('wt_exercise_cleanup_v1')){
@@ -790,6 +799,7 @@ function setSyncUI(status,label){
 
 // ── LOAD FROM SHEETS ──────────────────────────────────────────────────────────
 async function loadFromSheets(manual=false){
+  sheetsHistoryLoadedAt=0;sheetsHistorySignature='';
   if(!settings.scriptUrl){hideLoader();return;}
   if(manual) showLoader('Загружаем из Google Sheets...');
   setSyncUI('loading','Загрузка...');
@@ -799,15 +809,22 @@ async function loadFromSheets(manual=false){
     const r=await fetch(settings.scriptUrl+'?t='+Date.now(),{signal:controller.signal});
     const j=await r.json();
     if(j.ok&&j.sessions){
-      // merge: sheets is source of truth for synced, keep current (in-progress) workouts
+      // Sheets is source of truth for synced sessions; an unconfirmed local edit must survive a failed sync.
       const cur=state.current||{}, local=state.sessions||{};
-      const slotOf=session=>{const d=String(session.date||'');const iso=d.match(/^\d{4}-(\d{2})-(\d{2})$/);const short=d.match(/^(\d{2})\.(\d{2})$/);const md=iso?iso[1]+'-'+iso[2]:short?short[2]+'-'+short[1]:d;return md+'-'+session.dayIdx;};
-      const merged={...j.sessions},seenSlots=new Set(Object.values(j.sessions).map(slotOf));
-      Object.entries(local).forEach(([key,session])=>{if(!session.synced&&!seenSlots.has(slotOf(session))){merged[key]=session;seenSlots.add(slotOf(session));}});
+      const slotOf=session=>{const d=String(session.date||'');const iso=d.match(/^\\d{4}-(\\d{2})-(\\d{2})$/);const short=d.match(/^(\\d{2})\\.(\\d{2})$/);const md=iso?iso[1]+'-'+iso[2]:short?short[2]+'-'+short[1]:d;return md+'-'+session.dayIdx;};
+      const merged={...j.sessions};
+      Object.entries(local).forEach(([key,session])=>{
+        if(session.synced===true)return;
+        const slot=slotOf(session),serverKey=Object.entries(merged).find(([,candidate])=>slotOf(candidate)===slot)?.[0];
+        if(serverKey)delete merged[serverKey];
+        merged[key]=session;
+      });
       state.sessions=merged;
       if(j.muscleGroups){muscleMap={...WorkoutProgress.DEFAULT_EXERCISE_MUSCLES,...j.muscleGroups,...localMuscleOverrides};const missingDefaults=Object.keys(WorkoutProgress.DEFAULT_EXERCISE_MUSCLES).some(n=>!j.muscleGroups[n]);const changedLocally=Object.entries(localMuscleOverrides).some(([n,g])=>(j.muscleGroups[n]||'')!==g);if(missingDefaults||changedLocally||pendingGroupSync){pendingGroupSync=true;saveMuscleGroups();}}
       state.current=cur;
       save();
+      sheetsHistoryLoadedAt=Date.now();
+      sheetsHistorySignature=JSON.stringify(state.sessions||{});
       setSyncUI('ok','Синхронизировано');
       if(manual) showToast('Данные загружены из Sheets ✓');
     } else {
@@ -1360,6 +1377,49 @@ function exportJSON(){
   const data=JSON.stringify({version:1,sessions:state.sessions,current:state.current,exported:new Date().toISOString()},null,2);
   const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(data);
   a.download='workouts-'+todayStr()+'.json';a.click();
+}
+function setChatGPTExportStatus(message,type='info'){
+  const el=document.getElementById('chatgptExportStatus');
+  if(!el)return;
+  el.textContent=message;
+  el.style.color=type==='error'?'#b9473d':type==='success'?'#4e815e':'#77746e';
+}
+async function exportForChatGPT(){
+  const button=document.getElementById('chatgptExportBtn');
+  if(!button||button.disabled)return;
+  const readiness=WorkoutExport.exportReadiness({scriptUrl:settings.scriptUrl,loadedAt:sheetsHistoryLoadedAt,signatureMatches:JSON.stringify(state.sessions||{})===sheetsHistorySignature,sessions:state.sessions});
+  const messages={
+    'not-connected':'Сначала подключи Google Sheets в настройках.',
+    'not-loaded':'История ещё не загружена из Google Sheets. Нажми «Загрузить данные из Sheets» и повтори экспорт.',
+    stale:'Данные загружались больше 5 минут назад. Обнови их из Google Sheets и повтори экспорт.',
+    changed:'История изменилась после последней загрузки. Обнови данные из Sheets и повтори экспорт.',
+    pending:'Есть тренировки, не подтверждённые Google Sheets. Синхронизируй их в разделе «История» и повтори экспорт.'
+  };
+  if(readiness!=='ready'){setChatGPTExportStatus(messages[readiness]||'Не удалось подтвердить актуальность истории. Обнови данные из Sheets и повтори экспорт.','error');return;}
+
+  const revisionAtStart=progressRevision;
+  button.disabled=true;button.textContent='Проверяем историю…';
+  setChatGPTExportStatus('Проверяю, что история не менялась и загружена из Google Sheets…');
+  try{
+    // Use only the most recent successful read-only Sheets load. Export itself never sends a POST.
+    if(Date.now()-sheetsHistoryLoadedAt>300000)throw new Error('stale');
+    if(progressRevision!==revisionAtStart)throw new Error('changed');
+    if(JSON.stringify(state.sessions||{})!==sheetsHistorySignature)throw new Error('changed');
+    if(!WorkoutExport.isValidSessions(state.sessions))throw new Error('invalid-local');
+    const data=WorkoutExport.createChatGPTExport(state.sessions,new Date().toISOString());
+    if(progressRevision!==revisionAtStart||JSON.stringify(state.sessions||{})!==sheetsHistorySignature)throw new Error('changed');
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='workouts-for-chatgpt-'+todayStr()+'.json';
+    document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    setChatGPTExportStatus('Файл сформирован: '+data.workoutCount+' тренировок. Текущие черновики не включены.','success');
+    showToast('Экспорт для ChatGPT готов ✓');
+  }catch(error){
+    const message=error.name==='AbortError'?'Данные устарели. Повтори загрузку из Sheets.':error.message==='stale'?'Данные устарели. Обнови их из Google Sheets и повтори экспорт.':error.message==='changed'?'Данные изменились после последней загрузки. Обнови Sheets и повтори экспорт.':error.message==='invalid-local'?'В загруженной истории есть строки неполного формата. Экспорт отменён.':'Не удалось подтвердить полную историю из Sheets. Проверь подключение и повтори загрузку.';
+    setChatGPTExportStatus(message,'error');
+  }finally{
+    button.disabled=false;button.textContent='📄 Экспорт для ChatGPT';
+  }
 }
 async function importJSON(event){
   const file=event.target.files?.[0]; if(!file)return;
