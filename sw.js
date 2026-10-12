@@ -1,5 +1,5 @@
-const CACHE = 'workout-v14';
-const FILES = ['./', './index.html', './manifest.json', './icon-192.svg', './icon-512.svg', './progress.js?v=progress-fix-3', './progress-ui.js?v=progress-fix-3'];
+const CACHE = 'workout-v15';
+const FILES = ['./', './index.html', './manifest.json', './icon-192.svg', './icon-512.svg', './progress.js?v=progress-fix-5', './progress-ui.js?v=progress-fix-5', './export-core.js?v=chatgpt-export-1'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)));
